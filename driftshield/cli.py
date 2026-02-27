@@ -71,8 +71,8 @@ def alerts(
         return
 
     for event in events:
-        style = SEVERITY_STYLES.get(event.severity.value, "white")
-        console.print(f"\n  [{style}][{event.severity.value}][/{style}]  {_format_ts(event.timestamp)}  [bold]{event.agent_id}[/bold]")
+        style = SEVERITY_STYLES.get(event.severity, "white")
+        console.print(f"\n  [{style}][{event.severity}][/{style}]  {_format_ts(event.timestamp)}  [bold]{event.agent_id}[/bold]")
         console.print(f"          {event.message}")
         console.print(f"          [dim]Suggested action: {event.suggested_action}[/dim]")
 
