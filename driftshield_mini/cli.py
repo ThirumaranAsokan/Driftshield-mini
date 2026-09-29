@@ -138,7 +138,7 @@ def baseline(ctx: click.Context, agent_id: str) -> None:
     console.print(f"  Duration/run:     {bl.mean_duration_ms:.0f}ms ± {bl.std_duration_ms:.0f}ms")
 
     if bl.common_sequences:
-        console.print(f"\n  Common sequences:")
+        console.print("\n  Common sequences:")
         for seq in bl.common_sequences[:5]:
             console.print(f"    {'  →  '.join(seq)}")
 
