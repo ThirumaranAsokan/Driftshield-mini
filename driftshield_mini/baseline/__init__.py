@@ -7,6 +7,8 @@ import logging
 import numpy as np
 
 from driftshield_mini.models import BaselineStats
+from driftshield_mini.detectors.goal_drift import cosine_similarity
+from driftshield_mini.embeddings import load_embedding_model
 from driftshield_mini.storage import TraceStore
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,7 @@ class Calibrator:
         tools_per_run = []
         durations = []
         all_sequences = []
+        goal_similarities = []
 
         for run_id in run_ids:
             stats = self.store.get_run_stats(agent_id, run_id)
@@ -46,10 +49,30 @@ class Calibrator:
             tools_per_run.append(stats["tool_calls"])
             durations.append(stats["total_duration_ms"])
 
-            # Collect action sequences
+            # Collect action sequences.
             actions = self.store.get_recent_actions(agent_id, run_id, window=50)
             if actions:
                 all_sequences.append(actions)
+
+            # Build goal-alignment statistics from each run's first input and final
+            # textual output so calibrated goal detection uses run-level evidence.
+            run_traces = self.store.get_run_traces(agent_id, run_id)
+            goal_text = ""
+            output_text = ""
+            for trace in run_traces:
+                if not goal_text:
+                    goal_text = str(trace.input_data.get("input") or trace.input_data.get("query") or "")
+                text_value = trace.output_data.get("text") or trace.output_data.get("output") or ""
+                if text_value:
+                    output_text = str(text_value)
+            if goal_text and len(output_text.strip()) >= 20:
+                try:
+                    embedder = load_embedding_model()
+                    goal_emb = embedder.encode(goal_text)
+                    output_emb = embedder.encode(output_text[:512])
+                    goal_similarities.append(cosine_similarity(goal_emb, output_emb))
+                except Exception as exc:
+                    logger.warning("Goal baseline sample failed for run %s: %s", run_id, exc)
 
         tokens = np.array(tokens_per_run, dtype=np.float64)
         tools = np.array(tools_per_run, dtype=np.float64)
@@ -67,6 +90,8 @@ class Calibrator:
             mean_duration_ms=float(np.mean(durs)) if len(durs) > 0 else 0.0,
             std_duration_ms=float(np.std(durs)) if len(durs) > 1 else 0.0,
             common_sequences=self._find_common_sequences(all_sequences),
+            mean_goal_similarity=float(np.mean(goal_similarities)) if goal_similarities else 0.0,
+            std_goal_similarity=float(np.std(goal_similarities)) if len(goal_similarities) > 1 else 0.0,
             is_calibrated=is_calibrated,
         )
 
