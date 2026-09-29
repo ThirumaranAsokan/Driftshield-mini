@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+
 import numpy as np
 
 from driftshield_mini.detectors.base import BaseDetector
