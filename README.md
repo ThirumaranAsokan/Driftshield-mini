@@ -1,85 +1,172 @@
-# DriftShield
+
+
+
+# DriftShield Mini
+```markdown
+Privacy-first, zero-infrastructure drift detection for AI agents.
 
 Your LangChain agent just called the same API 47 times. Your CrewAI crew burned £200 in tokens overnight. Your research agent started writing marketing copy instead of financial summaries.
 
 You didn't find out until morning.
 
-**DriftShield catches this stuff in real-time.** It wraps your existing agent, watches what it does, and pings you on Slack or Discord the moment something goes sideways. No dashboard. No cloud. No account to create. Just a Python library that runs alongside your agent.
+DriftShield Mini catches this stuff in real-time.It wraps your existing agent, watches what it does, and pings you on Slack or Discord the moment something goes sideways. No dashboard. No cloud. No account to create. Just a local Python library running alongside your agent.
+
+```
 
 ---
 
-## What it actually does
+##  Installation
 
-DriftShield monitors three things:
+Install the updated v0.2.0 package via `pip`:
 
-**Loop detection**:  Is your agent calling the same tool over and over? Or stuck in a cycle like `search → format → search → format`? DriftShield spots the pattern and alerts you before it eats your budget.
+```bash
+pip install driftshield-mini==0.2.0
 
-**Goal drift**:  Is your agent still doing what you asked it to? DriftShield uses local embeddings (runs on your CPU, no API calls) to measure how far the agent's output has drifted from its original objective.
+```
 
-**Resource spikes**:  Is this run burning way more tokens or taking way longer than usual? DriftShield learns what "normal" looks like for your agent, then flags when things go abnormal.
+To install with specific framework extras:
 
-Everything stays on your machine. Traces go to a local SQLite file. Embeddings run on your CPU. The only thing that leaves your machine is the alert you choose to send to Slack/Discord.
+```bash
+pip install "driftshield-mini[autogen,llama-index,langchain]"
+
+```
 
 ---
 
-## Get started
+##  What It Actually Does
 
-```
-pip install driftshield-mini
-```
+DriftShield Mini monitors three core vectors:
 
-### LangChain
+1. **Loop Detection**: Is your agent calling the same tool repeatedly or stuck in an infinite cycle (e.g., `search → format → search → format`)? DriftShield flags the pattern before it eats your budget.
+2. **Goal Drift**: Is your agent staying on task? DriftShield uses local CPU embeddings to measure how far the agent's recent outputs have drifted from its initial objective.
+3. **Resource Spikes**: Is a run burning significantly more tokens or runtime than normal? DriftShield learns baseline behavior and flags anomalous executions.
+
+> **100% Local & Private**: All traces go to a local SQLite database. Embeddings run on your CPU. Nothing leaves your machine except the alerts you explicitly direct to Slack or Discord.
+
+---
+
+##  Supported Frameworks (v0.2.0)
+
+Import framework-specific wrappers using `driftshield_mini`:
 
 ```python
-from driftshield import DriftMonitor
+from driftshield_mini import DriftMonitor                 # LangChain / manual API
+from driftshield_mini.crewai import DriftCrew                 # CrewAI
+from driftshield_mini.autogen import DriftAutogenAgent        # Microsoft AutoGen
+from driftshield_mini.llama_index import DriftLlamaIndexHandler  # LlamaIndex
+from driftshield_mini.openai_assistants import DriftOpenAIClient # OpenAI Assistants
+from driftshield_mini.semantic_kernel import DriftKernelFilter   # Semantic Kernel
+from driftshield_mini.haystack import DriftHaystackTracer        # Haystack
+from driftshield_mini.google_adk import DriftADKCallbacks        # Google ADK
+
+```
+
+### Quick Framework Examples
+
+####  LangChain / Custom API
+
+```python
+from driftshield_mini import DriftMonitor
 
 monitor = DriftMonitor(
     agent_id="logistics-v2",
-    alert_webhook="https://hooks.slack.com/...",
+    alert_webhook="[https://hooks.slack.com/services/](https://hooks.slack.com/services/)...",
+    goal_description="Optimise routing plans"
 )
 
 agent = monitor.wrap(existing_agent)
 result = agent.invoke({"input": "optimise route for order #4821"})
-# DriftShield is now watching. That's it.
+
 ```
 
-### CrewAI
+####  CrewAI
 
 ```python
-from driftshield.crewai import DriftCrew
+from driftshield_mini.crewai import DriftCrew
 
 crew = DriftCrew(
     crew=existing_crew,
     agent_id="research-team-v1",
-    alert_webhook="https://discord.com/api/webhooks/...",
+    alert_webhook="[https://discord.com/api/webhooks/](https://discord.com/api/webhooks/)...",
 )
 
 result = crew.kickoff()
+
 ```
 
-### Works with any LLM
+####  Microsoft AutoGen
 
-OpenAI, Anthropic, Groq, Ollama, local models doesn't matter. DriftShield only sees the traces (tool calls, token counts, outputs), not the model internals. Swap providers whenever you want.
+```python
+monitored = DriftAutogenAgent(
+    agent=assistant, 
+    agent_id="autogen-analyst-v1",
+    alert_webhook="[https://hooks.slack.com/](https://hooks.slack.com/)..."
+)
+user_proxy.initiate_chat(monitored.agent, message="Summarise Q3 results")
+
+```
+
+####  LlamaIndex
+
+```python
+from llama_index.core.callbacks import CallbackManager
+from llama_index.core import Settings
+
+handler = DriftLlamaIndexHandler(agent_id="rag-agent-v1", goal_description="Answer policy questions")
+Settings.callback_manager = CallbackManager([handler.callback_handler])
+
+```
+
+####  OpenAI Assistants
+
+```python
+client = DriftOpenAIClient(openai.OpenAI(), agent_id="assistant-v1", goal_description="Process invoices")
+client.run_assistant(thread_id=t.id, assistant_id=a.id)
+
+```
+
+####  Semantic Kernel
+
+```python
+DriftKernelFilter(agent_id="sk-agent-v1", goal_description="Reconcile invoices").apply_to_kernel(kernel)
+
+```
+
+####  Haystack
+
+```python
+DriftHaystackTracer(agent_id="haystack-v1").enable()   # Call once before running pipelines
+
+```
+
+####  Google ADK
+
+```python
+drift = DriftADKCallbacks(agent_id="adk-v1")
+agent = Agent(..., before_tool_callback=drift.before_tool, after_tool_callback=drift.after_tool)
+
+```
 
 ---
 
-## How calibration works
+##  How Calibration Works
 
-For the first 30 runs (configurable), DriftShield quietly observes your agent and builds a baseline average tokens per run, typical tool sequences, normal execution time. No alerts during this phase.
+For the first 30 runs (configurable), DriftShield quietly observes your agent to establish baseline averages for token consumption, execution times, and tool call sequences. No alerts are fired during this warm-up phase.
 
-After that, it knows what "normal" looks like and starts flagging deviations. You can inspect the baseline anytime:
+Once calibrated, it flags statistical anomalies. You can inspect your agent's baseline at any time:
 
 ```bash
 driftshield baseline my-agent
+
 ```
 
-> **Tip:** If 30 runs feels like a lot, you can lower `calibration_runs` or use a preset template. DriftShield still catches obvious problems (like 50 identical tool calls) even without a baseline, using absolute safety limits.
+> **Note**: Even during initial calibration, DriftShield uses hard safety bounds to flag extreme loops (such as 50 identical sequential tool calls).
 
 ---
 
-## What an alert looks like
+##  Sample Alert Payload
 
-When drift hits your Slack/Discord, you get:
+When drift is detected, structured payloads are dispatched to your configured webhook:
 
 ```json
 {
@@ -91,199 +178,99 @@ When drift hits your Slack/Discord, you get:
   "context": {
     "tool_name": "search_inventory",
     "repeat_count": 6,
-    "recent_actions": ["search_inventory", "search_inventory", "search_inventory", "..."]
+    "recent_actions": ["search_inventory", "search_inventory", "search_inventory"]
   }
 }
-```
 
-Not just "something's wrong" — it tells you what happened, which detector caught it, and what to check first.
+```
 
 ---
 
-## CLI
+##  CLI Reference
+
+### Commands Overview
+
+| Command | Description |
+| --- | --- |
+| `alerts` | View recent drift alerts across agents. |
+| `baseline` | Show calculated baseline statistics for an agent. |
+| `download-model` | Download embedding models for offline/air-gapped execution. |
+| `export` | Export compliance logs formatted for regulatory frameworks (FCA / EU AI Act). |
+| `runs` | List recent execution runs for an agent. |
+| `traces` | View detailed trace logs for specific agent runs. |
+
+### CLI Usage Examples
 
 ```bash
-# What went wrong in the last 24 hours?
+# View alerts triggered in the last 24 hours
 driftshield alerts --last 24h
 
-# Show me exactly what my agent did on its last run
+# Inspect execution traces for a specific run
 driftshield traces logistics-v2 --run latest
 
-# What does "normal" look like for this agent?
-driftshield baseline logistics-v2
+# Export audit logs for compliance (CSV or JSON)
+driftshield export --agent logistics-v2 --output audit.csv
+driftshield export --agent logistics-v2 --output drift.json --drift-only --format json
 
-# List recent runs
-driftshield runs logistics-v2
+# Pre-download embedding models for air-gapped environments
+driftshield download-model
+
 ```
 
 ---
 
-## Configuration
+##  Detailed Configuration Options
 
-Everything's tuneable. Defaults are sensible, but you can adjust:
+Defaults are pre-tuned, but all parameters can be customized programmatically:
 
 ```python
+from driftshield_mini import DriftMonitor
+
 monitor = DriftMonitor(
     agent_id="my-agent",
-    alert_webhook="https://hooks.slack.com/...",
+    alert_webhook="[https://hooks.slack.com/](https://hooks.slack.com/)...",
     goal_description="Summarise financial reports",
-    calibration_runs=30,         # runs before baseline kicks in
-    loop_window=20,              # how many recent actions to check
-    loop_max_repeats=4,          # repeated calls before flagging
-    similarity_threshold=0.5,    # goal drift sensitivity (lower = stricter)
-    spike_multiplier=2.5,        # how many std devs = a spike
-    min_alert_severity="MED",    # ignore LOW severity events
-    alert_cooldown=60.0,         # don't spam the same alert
+    calibration_runs=30,         # Runs before baseline detection activates
+    loop_window=20,              # Number of recent actions inspected for loops
+    loop_max_repeats=4,          # Repeated tool calls allowed before alerting
+    similarity_threshold=0.5,    # Goal drift sensitivity (lower = stricter)
+    spike_multiplier=2.5,        # Standard deviation multiplier for resource spikes
+    min_alert_severity="MED",    # Minimum severity required to trigger webhooks
+    alert_cooldown=60.0          # Seconds to wait before resending duplicate alerts
 )
+
 ```
 
 ---
 
-## Custom reactions
+##  Programmatic Hooks
 
-DriftShield alerts you by default, but you can also react programmatically:
+Attach custom event listeners to act on alerts programmatically:
 
 ```python
 def handle_drift(event):
     if event.severity.value == "CRITICAL":
-        agent.stop()  # kill the run
-        page_oncall()  # wake someone up
+        agent.stop()        # Terminate execution
+        notify_oncall()     # Trigger on-call notification
 
 monitor.on_drift(handle_drift)
+
 ```
 
 ---
 
-## What this isn't
+##  Why I Built This
 
-I want to be upfront about scope. DriftShield is **v0.1.1**, built by one person.
+I kept hearing the same story: a developer builds an agent, it passes local tests, but runs wild overnight in production leaving them with a high API bill and a broken service. Complex observability platforms exist, but they often require hosted infrastructure, SaaS sign-ups, and dashboard overhead.
 
-- **Not a full observability platform.** No web dashboard, no hosted backend, no team features. If you need that, look at LangSmith, Langfuse, or Arize.
-- **Not a guardrail system.** It detects drift after the fact and alerts you. It doesn't block actions before they happen (that's on the roadmap).
-- **Not production-hardened yet.** It works, it's tested, but it hasn't been battle-tested by thousands of users. Expect rough edges.
-
-What it IS: the smallest, simplest tool that does one thing well — tells you when your agent is going off the rails, fast, with zero setup overhead.
+DriftShield Mini is designed as a minimal, lightweight utility to inform you when an agent strays off course, with zero external platform dependencies.
 
 ---
 
-## Roadmap
+##  License
 
-- **v0.2** — Auto-correction hooks (retry, context trim, kill run). Preset baseline templates so you get value from run 1.
-- **v0.3** — Better multi-agent support. Predictive drift (catch it before it happens).
-- **v1.0** — Dashboard, team features, historical analytics. But only if people actually want it.
+Distributed under the [MIT License](LICENSE).
 
----
-
-## Built with
-
-- Python 3.10+
-- SQLite (zero config)
-- sentence-transformers (local CPU embeddings)
-- scikit-learn (basic stats)
-- httpx (webhooks)
-- click + rich (CLI)
-
----
-
-## Contributing
-
-This is early. If you're running agents in production and hit a case DriftShield missed (or flagged incorrectly), please open an issue. Your real-world edge cases are the most valuable thing you can give this project right now.
-
-```bash
-git clone https://github.com/YOUR_USERNAME/Driftshield-mini.git
-cd driftshield
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-pip install -e ".[dev]"
-python -m pytest tests/ -v
 ```
 
----
-# V2
-# Supported frameworks (v0.2.0)
-
-All wrappers share the same detectors (action loop, goal drift, resource spike),
-local SQLite storage, and Slack/Discord alerting. Nothing leaves the machine.
-
-```python
-from driftshield_mini import DriftMonitor                    # LangChain / manual API
-from driftshield_mini.crewai import DriftCrew                 # CrewAI
-from driftshield_mini.autogen import DriftAutogenAgent        # Microsoft AutoGen
-from driftshield_mini.llama_index import DriftLlamaIndexHandler  # LlamaIndex
-from driftshield_mini.openai_assistants import DriftOpenAIClient # OpenAI Assistants
-from driftshield_mini.semantic_kernel import DriftKernelFilter   # Semantic Kernel
-from driftshield_mini.haystack import DriftHaystackTracer        # Haystack
-from driftshield_mini.google_adk import DriftADKCallbacks        # Google ADK
 ```
-
-## AutoGen (Microsoft)
-
-```python
-monitored = DriftAutogenAgent(agent=assistant, agent_id="autogen-analyst-v1",
-                              alert_webhook="https://hooks.slack.com/...")
-user_proxy.initiate_chat(monitored.agent, message="Summarise Q3 results")
-```
-
-## LlamaIndex
-
-```python
-from llama_index.core.callbacks import CallbackManager
-from llama_index.core import Settings
-handler = DriftLlamaIndexHandler(agent_id="rag-agent-v1", goal_description="Answer policy questions")
-Settings.callback_manager = CallbackManager([handler.callback_handler])
-```
-
-## OpenAI Assistants
-
-```python
-client = DriftOpenAIClient(openai.OpenAI(), agent_id="assistant-v1", goal_description="Process invoices")
-client.run_assistant(thread_id=t.id, assistant_id=a.id)
-```
-
-## Semantic Kernel
-
-```python
-DriftKernelFilter(agent_id="sk-agent-v1", goal_description="Reconcile invoices").apply_to_kernel(kernel)
-```
-
-## Haystack
-
-```python
-DriftHaystackTracer(agent_id="haystack-v1").enable()   # once, before running pipelines
-```
-
-## Google ADK
-
-```python
-drift = DriftADKCallbacks(agent_id="adk-v1")
-agent = Agent(..., before_tool_callback=drift.before_tool, after_tool_callback=drift.after_tool)
-```
-
-## Compliance audit export
-
-```bash
-driftshield export --agent my-agent --output audit.csv
-driftshield export --agent my-agent --output drift.json --drift-only --format json
-```
-
-## Offline / air-gapped
-
-```bash
-driftshield download-model
-```
-
-
-
-## Why I built this
-
-I kept reading the same story: dev builds agent, agent works great in testing, agent goes haywire in production at 2am, dev wakes up to a hefty API bill and a Slack full of confused users. The big observability platforms exist but they're heavy on dashboards, accounts, pricing tiers, cloud dependencies. Most solo devs and small teams just want to know when their agent is broken. That's it.
-
-So I built the smallest thing that solves that problem.
-
-If you try it and it helps (or doesn't), I genuinely want to hear about it.
-
----
-
-## License
-
-MIT - do whatever you want with it.
