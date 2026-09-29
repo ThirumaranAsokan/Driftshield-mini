@@ -1,0 +1,44 @@
+Metadata-Version: 2.4
+Name: driftshield-mini
+Version: 0.2.0
+Summary: Privacy-first, zero-infrastructure drift detection for AI agents — LangChain, CrewAI, AutoGen, LlamaIndex, OpenAI Assistants, Semantic Kernel, Haystack, Google ADK
+Author: DriftShield
+License: MIT
+Project-URL: Homepage, https://github.com/ThirumaranAsokan/Driftshield-mini
+Project-URL: Issues, https://github.com/ThirumaranAsokan/Driftshield-mini/issues
+Keywords: ai,agents,monitoring,drift-detection,langchain,crewai,autogen,llama-index,semantic-kernel,haystack,google-adk,compliance,fca,audit
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: sentence-transformers>=2.2.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: click>=8.1.0
+Requires-Dist: httpx>=0.25.0
+Requires-Dist: rich>=13.0.0
+Provides-Extra: langchain
+Requires-Dist: langchain>=0.1.0; extra == "langchain"
+Requires-Dist: langchain-core>=0.1.0; extra == "langchain"
+Provides-Extra: crewai
+Requires-Dist: crewai>=0.1.0; extra == "crewai"
+Provides-Extra: autogen
+Requires-Dist: pyautogen>=0.2.0; extra == "autogen"
+Provides-Extra: llama-index
+Requires-Dist: llama-index-core>=0.10.0; extra == "llama-index"
+Provides-Extra: openai
+Requires-Dist: openai>=1.30.0; extra == "openai"
+Provides-Extra: semantic-kernel
+Requires-Dist: semantic-kernel>=1.0.0; extra == "semantic-kernel"
+Provides-Extra: haystack
+Requires-Dist: haystack-ai>=2.0.0; extra == "haystack"
+Provides-Extra: google-adk
+Requires-Dist: google-adk>=0.1.0; extra == "google-adk"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
