@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections import Counter
-
 from driftshield_mini.detectors.base import BaseDetector
 from driftshield_mini.models import (
     BaselineStats,
