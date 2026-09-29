@@ -220,6 +220,14 @@ class TraceStore:
 
     # ── Run Stats (for baseline building) ─────────────────────────
 
+    def run_has_drift(self, agent_id: str, run_id: str) -> bool:
+        """Return whether a run produced at least one stored drift event."""
+        row = self._conn.execute(
+            "SELECT 1 FROM drift_events WHERE agent_id = ? AND run_id = ? LIMIT 1",
+            (agent_id, run_id),
+        ).fetchone()
+        return row is not None
+
     def get_run_stats(self, agent_id: str, run_id: str) -> dict[str, Any]:
         """Get aggregate stats for a single run."""
         row = self._conn.execute(
