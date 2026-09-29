@@ -14,7 +14,15 @@ It is designed as an **in-process library**. Traces and baselines are stored loc
 
 ## Installation
 
-For the current development release:
+For the audited development branch, install from source:
+
+```bash
+git clone https://github.com/ThirumaranAsokan/Driftshield-mini.git
+cd Driftshield-mini
+pip install -e .
+```
+
+After v0.2.2 is published to PyPI, the versioned installation will be:
 
 ```bash
 pip install driftshield-mini==0.2.2
