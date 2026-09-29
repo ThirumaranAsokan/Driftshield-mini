@@ -35,7 +35,7 @@ dependencies = [
 [project.optional-dependencies]
 langchain = ["langchain>=0.1.0", "langchain-core>=0.1.0"]
 crewai = ["crewai>=0.1.0"]
-autogen = ["pyautogen>=0.2.0"]
+autogen = ["pyautogen>=0.2.0,<0.3.0"]
 llama-index = ["llama-index-core>=0.10.0"]
 openai = ["openai>=1.30.0"]
 semantic-kernel = ["semantic-kernel>=1.0.0"]
