@@ -1,62 +1,30 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+# Byte-compiled / build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
 
-[project]
-name = "driftshield-mini"
-version = "0.2.0"
-description = "Privacy-first, zero-infrastructure drift detection for AI agents — LangChain, CrewAI, AutoGen, LlamaIndex, OpenAI Assistants, Semantic Kernel, Haystack, Google ADK"
-readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.10"
-authors = [
-    {name = "DriftShield"}
-]
-keywords = ["ai", "agents", "monitoring", "drift-detection", "langchain", "crewai",
-            "autogen", "llama-index", "semantic-kernel", "haystack", "google-adk",
-            "compliance", "fca", "audit"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Libraries",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-]
+# Virtual environments
+.venv/
+venv/
+env/
 
-dependencies = [
-    "sentence-transformers>=2.2.0",
-    "scikit-learn>=1.3.0",
-    "numpy>=1.24.0",
-    "click>=8.1.0",
-    "httpx>=0.25.0",
-    "rich>=13.0.0",
-]
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
-[project.optional-dependencies]
-langchain = ["langchain>=0.1.0", "langchain-core>=0.1.0"]
-crewai = ["crewai>=0.1.0"]
-autogen = ["pyautogen>=0.2.0"]
-llama-index = ["llama-index-core>=0.10.0"]
-openai = ["openai>=1.30.0"]
-semantic-kernel = ["semantic-kernel>=1.0.0"]
-haystack = ["haystack-ai>=2.0.0"]
-google-adk = ["google-adk>=0.1.0"]
-dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "ruff>=0.1.0"]
+# DriftShield local data
+*.db
+*.db-journal
+driftshield_mini/models/
 
-[project.scripts]
-driftshield = "driftshield_mini.cli:cli"
-
-[project.urls]
-Homepage = "https://github.com/ThirumaranAsokan/Driftshield-mini"
-Issues = "https://github.com/ThirumaranAsokan/Driftshield-mini/issues"
-
-[tool.setuptools.packages.find]
-include = ["driftshield_mini*", "driftshield*"]
-
-[tool.setuptools.package-data]
-driftshield_mini = ["models/**/*"]
-
-[tool.ruff]
-line-length = 100
-target-version = "py310"
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
