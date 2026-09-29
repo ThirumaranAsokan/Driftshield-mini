@@ -14,7 +14,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-from driftshield_mini.models import DriftEvent, TraceEvent
 from driftshield_mini.storage import TraceStore
 
 TRACE_FIELDS = [
