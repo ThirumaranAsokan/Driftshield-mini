@@ -17,10 +17,10 @@ DriftShield Mini catches this stuff in real-time.It wraps your existing agent, w
 
 ##  Installation
 
-Install the updated v0.2.0 package via `pip`:
+Install the updated v0.2.1 package via `pip`:
 
 ```bash
-pip install driftshield-mini==0.2.0
+pip install driftshield-mini==0.2.1
 
 ```
 
