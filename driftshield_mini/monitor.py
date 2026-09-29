@@ -1,4 +1,4 @@
-"""DriftMonitor — the core wrapper that ties detection, storage, and alerting together."""
+"""DriftMonitor the core wrapper that ties detection, storage, and alerting together."""
 
 from __future__ import annotations
 
@@ -8,11 +8,11 @@ import uuid
 from functools import wraps
 from typing import Any, Callable
 
-from driftshield.alerts import AlertDispatcher
-from driftshield.baseline import Calibrator
-from driftshield.detectors import ActionLoopDetector, GoalDriftDetector, ResourceSpikeDetector
-from driftshield.models import BaselineStats, DriftEvent, TraceEvent
-from driftshield.storage import TraceStore
+from driftshield_mini.alerts import AlertDispatcher
+from driftshield_mini.baseline import Calibrator
+from driftshield_mini.detectors import ActionLoopDetector, GoalDriftDetector, ResourceSpikeDetector
+from driftshield_mini.models import BaselineStats, DriftEvent, TraceEvent
+from driftshield_mini.storage import TraceStore
 
 logger = logging.getLogger(__name__)
 
