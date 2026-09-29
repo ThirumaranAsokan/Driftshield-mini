@@ -1,15 +1,18 @@
-"""CLI for inspecting DriftShield data — alerts, traces, and baselines."""
+"""CLI for inspecting DriftShield data — alerts, traces, baselines, and audit export."""
 
 from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import click
 from rich.console import Console
 from rich.table import Table
 
-from driftshield.storage import TraceStore
+from driftshield_mini.embeddings import download_model
+from driftshield_mini.export import export_drift_events, export_traces
+from driftshield_mini.storage import TraceStore
 
 console = Console()
 
@@ -51,20 +54,12 @@ def cli(ctx: click.Context, db: str | None) -> None:
 @click.option("--severity", default=None, type=click.Choice(["LOW", "MED", "HIGH", "CRITICAL"]))
 @click.option("--limit", default=20, help="Max results")
 @click.pass_context
-def alerts(
-    ctx: click.Context,
-    last: str,
-    agent: str | None,
-    severity: str | None,
-    limit: int,
-) -> None:
+def alerts(ctx: click.Context, last: str, agent: str | None,
+           severity: str | None, limit: int) -> None:
     """View recent drift alerts."""
     store: TraceStore = ctx.obj["store"]
     since = _parse_time_window(last)
-
-    events = store.get_drift_events(
-        agent_id=agent, since=since, severity=severity, limit=limit
-    )
+    events = store.get_drift_events(agent_id=agent, since=since, severity=severity, limit=limit)
 
     if not events:
         console.print("[dim]No drift events found.[/dim]")
@@ -185,6 +180,40 @@ def runs(ctx: click.Context, agent_id: str, limit: int) -> None:
 
     console.print(table)
     console.print()
+
+
+@cli.command()
+@click.option("--agent", default=None, help="Filter by agent ID")
+@click.option("--output", required=True, help="Output file path (e.g. audit.csv or audit.json)")
+@click.option("--format", "fmt", type=click.Choice(["csv", "json"]), default=None,
+              help="Export format (default: inferred from file extension)")
+@click.option("--last", default=None, help="Only export last N h/d (e.g. 24h, 7d)")
+@click.option("--drift-only", is_flag=True, help="Export drift events only (incident log)")
+@click.option("--limit", default=100000, help="Max rows")
+@click.pass_context
+def export(ctx: click.Context, agent: str | None, output: str, fmt: str | None,
+           last: str | None, drift_only: bool, limit: int) -> None:
+    """Export an audit log for compliance (FCA / EU AI Act)."""
+    store: TraceStore = ctx.obj["store"]
+
+    if fmt is None:
+        fmt = Path(output).suffix.lstrip(".").lower() or "csv"
+    hours = (time.time() - _parse_time_window(last)) / 3600 if last else None
+
+    if drift_only:
+        path = export_drift_events(store, output, agent_id=agent, fmt=fmt, hours=hours, limit=limit)
+    else:
+        path = export_traces(store, output, agent_id=agent, fmt=fmt, hours=hours, limit=limit)
+
+    console.print(f"[green]OK[/green] Exported to {path}")
+
+
+@cli.command(name="download-model")
+@click.option("--output", default=None, help="Target directory (default: bundled package dir)")
+def download_model_cmd(output: str | None) -> None:
+    """Download the embedding model for offline/air-gapped use."""
+    path = download_model(Path(output) if output else None)
+    console.print(f"[green]OK[/green] Model saved to {path}")
 
 
 if __name__ == "__main__":
