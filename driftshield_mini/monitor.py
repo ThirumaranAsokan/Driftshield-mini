@@ -188,6 +188,11 @@ class DriftMonitor:
         since = time.time() - (hours * 3600)
         return self.store.get_drift_events(agent_id=self.agent_id, since=since, limit=limit)
 
+    def close(self) -> None:
+        """Release local storage and background alert resources."""
+        self.alerter.close()
+        self.store.close()
+
 
 class _LangChainWrapper:
     """Transparent wrapper around a LangChain agent/chain."""
