@@ -6,9 +6,8 @@ import logging
 import threading
 import time
 import uuid
-from typing import Any
-
 from collections.abc import Callable
+from typing import Any
 
 from driftshield_mini.alerts import AlertDispatcher
 from driftshield_mini.baseline import Calibrator
