@@ -126,7 +126,7 @@ def test_background_alert_submission_does_not_block(monkeypatch):
         time.sleep(0.2)
         return True
 
-    monkeypatch.setattr(dispatcher, "send_sync", slow_send)
+    monkeypatch.setattr(dispatcher, "_send_sync", slow_send)
     future = dispatcher.send_background(event)
     assert started.wait(0.5)
     assert future is not None
