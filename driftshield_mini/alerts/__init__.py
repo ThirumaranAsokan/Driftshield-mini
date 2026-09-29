@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from driftshield_mini.models import DriftEvent
@@ -41,6 +43,8 @@ class AlertDispatcher:
         self.min_severity = min_severity
         self.cooldown_seconds = cooldown_seconds
         self._last_alert: dict[str, float] = {}  # agent_id+detector → timestamp
+        self._lock = threading.Lock()
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="driftshield-alert")
 
     def should_alert(self, event: DriftEvent) -> bool:
         """Check if alert should fire (severity + cooldown)."""
@@ -57,11 +61,22 @@ class AlertDispatcher:
         # Cooldown: don't spam the same detector for the same agent
         key = f"{event.agent_id}:{event.detector.value}"
         now = time.time()
-        if key in self._last_alert and (now - self._last_alert[key]) < self.cooldown_seconds:
-            return False
-
-        self._last_alert[key] = now
+        with self._lock:
+            if key in self._last_alert and (now - self._last_alert[key]) < self.cooldown_seconds:
+                return False
+            self._last_alert[key] = now
         return True
+
+    def _release_alert(self, event: DriftEvent) -> None:
+        key = f"{event.agent_id}:{event.detector.value}"
+        with self._lock:
+            self._last_alert.pop(key, None)
+
+    def send_background(self, event: DriftEvent):
+        """Queue webhook delivery so detector execution never waits on HTTP."""
+        if not self.webhook_url:
+            return None
+        return self._executor.submit(self.send_sync, event)
 
     async def send_async(self, event: DriftEvent) -> bool:
         """Send alert via async HTTP (preferred)."""
@@ -78,6 +93,7 @@ class AlertDispatcher:
                 logger.info(f"Alert sent for {event.agent_id}: {event.message}")
                 return True
         except Exception as e:
+            self._release_alert(event)
             logger.warning(f"Failed to send alert: {e}")
             return False
 
@@ -96,8 +112,13 @@ class AlertDispatcher:
                 logger.info(f"Alert sent for {event.agent_id}: {event.message}")
                 return True
         except Exception as e:
+            self._release_alert(event)
             logger.warning(f"Failed to send alert: {e}")
             return False
+
+    def close(self) -> None:
+        """Stop background alert workers."""
+        self._executor.shutdown(wait=False, cancel_futures=True)
 
     def _build_payload(self, event: DriftEvent) -> dict[str, Any]:
         """Build webhook payload — auto-detects Slack vs Discord vs generic."""
