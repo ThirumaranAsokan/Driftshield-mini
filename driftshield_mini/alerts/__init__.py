@@ -74,9 +74,25 @@ class AlertDispatcher:
 
     def send_background(self, event: DriftEvent):
         """Queue webhook delivery so detector execution never waits on HTTP."""
-        if not self.webhook_url:
+        if not self.should_alert(event):
             return None
-        return self._executor.submit(self.send_sync, event)
+        return self._executor.submit(self._send_sync, event)
+
+    def _send_sync(self, event: DriftEvent) -> bool:
+        """Send an already-admitted alert without reapplying cooldown."""
+        try:
+            import httpx
+
+            payload = self._build_payload(event)
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.post(self.webhook_url, json=payload)
+                resp.raise_for_status()
+                logger.info(f"Alert sent for {event.agent_id}: {event.message}")
+                return True
+        except Exception as e:
+            self._release_alert(event)
+            logger.warning(f"Failed to send alert: {e}")
+            return False
 
     async def send_async(self, event: DriftEvent) -> bool:
         """Send alert via async HTTP (preferred)."""
@@ -101,20 +117,7 @@ class AlertDispatcher:
         """Send alert via sync HTTP (fallback)."""
         if not self.should_alert(event):
             return False
-
-        try:
-            import httpx
-
-            payload = self._build_payload(event)
-            with httpx.Client(timeout=10.0) as client:
-                resp = client.post(self.webhook_url, json=payload)
-                resp.raise_for_status()
-                logger.info(f"Alert sent for {event.agent_id}: {event.message}")
-                return True
-        except Exception as e:
-            self._release_alert(event)
-            logger.warning(f"Failed to send alert: {e}")
-            return False
+        return self._send_sync(event)
 
     def close(self) -> None:
         """Stop background alert workers."""
