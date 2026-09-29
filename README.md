@@ -213,7 +213,7 @@ from driftshield_mini.haystack import DriftHaystackTracer
 from driftshield_mini.google_adk import DriftADKCallbacks
 ```
 
-Framework APIs change frequently. Compatibility should be tested against the framework versions used by your deployment.
+Framework APIs change frequently. The AutoGen adapter currently targets the legacy `pyautogen` 0.2.x API (`pyautogen>=0.2,<0.3`). The OpenAI adapter currently targets the legacy Assistants/Threads API exposed by the OpenAI Python client. Compatibility should be tested against the exact framework/client versions used by your deployment.
 
 ## CLI
 
