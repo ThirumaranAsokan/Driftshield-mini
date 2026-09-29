@@ -7,37 +7,18 @@ from typing import Any
 
 import numpy as np
 
-from driftshield.detectors.base import BaseDetector
-from driftshield.models import (
+from driftshield_mini.detectors.base import BaseDetector
+from driftshield_mini.embeddings import load_embedding_model
+from driftshield_mini.models import (
     BaselineStats,
     DetectorType,
     DriftEvent,
     Severity,
     TraceEvent,
 )
-from driftshield.storage import TraceStore
+from driftshield_mini.storage import TraceStore
 
 logger = logging.getLogger(__name__)
-
-# Lazy-loaded to avoid import cost when not needed
-_embedder = None
-
-
-def _get_embedder():
-    """Lazy-load the sentence-transformers model (CPU only)."""
-    global _embedder
-    if _embedder is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-
-            _embedder = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
-            logger.info("Loaded sentence-transformers model: all-MiniLM-L6-v2")
-        except ImportError:
-            raise ImportError(
-                "Goal drift detection requires sentence-transformers. "
-                "Install with: pip install sentence-transformers"
-            )
-    return _embedder
 
 
 def cosine_similarity(a: list[float] | np.ndarray, b: list[float] | np.ndarray) -> float:
@@ -83,7 +64,7 @@ class GoalDriftDetector(BaseDetector):
         if self._goal_embedding is None:
             if not self.goal_description:
                 raise ValueError("Goal description not set. Call set_goal() first.")
-            embedder = _get_embedder()
+            embedder = load_embedding_model()
             self._goal_embedding = embedder.encode(self.goal_description)
         return self._goal_embedding
 
@@ -107,7 +88,7 @@ class GoalDriftDetector(BaseDetector):
             return None
 
         try:
-            embedder = _get_embedder()
+            embedder = load_embedding_model()
             goal_emb = self._get_goal_embedding()
             output_emb = embedder.encode(output_text[:512])  # Truncate for efficiency
 
@@ -116,14 +97,12 @@ class GoalDriftDetector(BaseDetector):
             # Use calibrated threshold from baseline if available
             threshold = self.similarity_threshold
             if baseline and baseline.is_calibrated and baseline.mean_goal_similarity > 0:
-                # Drift if we drop significantly below baseline mean
                 threshold = max(
                     self.similarity_threshold,
                     baseline.mean_goal_similarity - 2 * max(baseline.std_goal_similarity, 0.05),
                 )
 
             if similarity < threshold:
-                # Score: how far below threshold (normalized 0-1)
                 score = min(1.0, (threshold - similarity) / threshold)
                 baseline_info = (
                     f" (baseline: {baseline.mean_goal_similarity:.2f})"
@@ -154,5 +133,5 @@ class GoalDriftDetector(BaseDetector):
 
     def embed_text(self, text: str) -> list[float]:
         """Utility: embed a text string. Useful for baseline building."""
-        embedder = _get_embedder()
+        embedder = load_embedding_model()
         return embedder.encode(text).tolist()

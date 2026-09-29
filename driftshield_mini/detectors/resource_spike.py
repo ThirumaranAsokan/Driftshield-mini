@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import time
 
-from driftshield.detectors.base import BaseDetector
-from driftshield.models import (
+from driftshield_mini.detectors.base import BaseDetector
+from driftshield_mini.models import (
     BaselineStats,
     DetectorType,
     DriftEvent,
     Severity,
     TraceEvent,
 )
-from driftshield.storage import TraceStore
+from driftshield_mini.storage import TraceStore
 
 
 class ResourceSpikeDetector(BaseDetector):

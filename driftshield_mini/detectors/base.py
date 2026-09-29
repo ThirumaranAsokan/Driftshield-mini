@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from driftshield.models import BaselineStats, DriftEvent, TraceEvent
-from driftshield.storage import TraceStore
+from driftshield_mini.models import BaselineStats, DriftEvent, TraceEvent
+from driftshield_mini.storage import TraceStore
 
 
 class BaseDetector(ABC):

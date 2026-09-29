@@ -6,8 +6,8 @@ import logging
 
 import numpy as np
 
-from driftshield.models import BaselineStats
-from driftshield.storage import TraceStore
+from driftshield_mini.models import BaselineStats
+from driftshield_mini.storage import TraceStore
 
 logger = logging.getLogger(__name__)
 

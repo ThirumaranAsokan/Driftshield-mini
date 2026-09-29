@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from driftshield.models import DriftEvent
+from driftshield_mini.models import DriftEvent
 
 logger = logging.getLogger(__name__)
 
