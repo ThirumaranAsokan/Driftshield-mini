@@ -4,15 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "driftshield-mini"
-version = "0.1.1"
-description = "Real-time behavioural drift detection for agentic AI systems"
+version = "0.2.0"
+description = "Privacy-first, zero-infrastructure drift detection for AI agents — LangChain, CrewAI, AutoGen, LlamaIndex, OpenAI Assistants, Semantic Kernel, Haystack, Google ADK"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
     {name = "DriftShield"}
 ]
-keywords = ["ai", "agents", "monitoring", "drift-detection", "langchain", "crewai"]
+keywords = ["ai", "agents", "monitoring", "drift-detection", "langchain", "crewai",
+            "autogen", "llama-index", "semantic-kernel", "haystack", "google-adk",
+            "compliance", "fca", "audit"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -34,17 +36,26 @@ dependencies = [
 [project.optional-dependencies]
 langchain = ["langchain>=0.1.0", "langchain-core>=0.1.0"]
 crewai = ["crewai>=0.1.0"]
+autogen = ["pyautogen>=0.2.0"]
+llama-index = ["llama-index-core>=0.10.0"]
+openai = ["openai>=1.30.0"]
+semantic-kernel = ["semantic-kernel>=1.0.0"]
+haystack = ["haystack-ai>=2.0.0"]
+google-adk = ["google-adk>=0.1.0"]
 dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "ruff>=0.1.0"]
 
 [project.scripts]
-driftshield = "driftshield.cli:cli"
+driftshield = "driftshield_mini.cli:cli"
 
 [project.urls]
-Homepage = "https://github.com/driftshield/driftshield-mini"
-Issues = "https://github.com/driftshield/driftshield-mini/issues"
+Homepage = "https://github.com/ThirumaranAsokan/Driftshield-mini"
+Issues = "https://github.com/ThirumaranAsokan/Driftshield-mini/issues"
 
 [tool.setuptools.packages.find]
-include = ["driftshield*"]
+include = ["driftshield_mini*", "driftshield*"]
+
+[tool.setuptools.package-data]
+driftshield_mini = ["models/**/*"]
 
 [tool.ruff]
 line-length = 100
