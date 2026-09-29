@@ -15,7 +15,7 @@ Framework integrations:
 from driftshield_mini.models import BaselineStats, DetectorType, DriftEvent, Severity, TraceEvent
 from driftshield_mini.monitor import DriftMonitor
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 __all__ = [
     "DriftMonitor",

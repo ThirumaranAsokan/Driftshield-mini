@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 import uuid
 from functools import wraps
@@ -22,7 +23,8 @@ class DriftMonitor:
     In-process wrapper for agentic AI systems.
 
     Decorates an agent's execution, intercepts events, and analyses them
-    asynchronously. No separate server, no network hop, no infrastructure.
+    locally. Webhook delivery is dispatched in the background so a slow or
+    unavailable notification endpoint does not block the agent.
 
     Usage:
         monitor = DriftMonitor(
@@ -51,7 +53,7 @@ class DriftMonitor:
         alert_cooldown: float = 60.0,
     ):
         self.agent_id = agent_id
-        self._current_run_id: str | None = None
+        self._run_context = threading.local()
 
         # Storage
         self.store = TraceStore(db_path=db_path)
@@ -100,18 +102,19 @@ class DriftMonitor:
 
     def start_run(self, run_id: str | None = None, goal: str | None = None) -> str:
         """Manually start a monitored run. Returns the run ID."""
-        self._current_run_id = run_id or uuid.uuid4().hex[:12]
+        self._run_context.run_id = run_id or uuid.uuid4().hex[:12]
         if goal:
             self.goal_drift.set_goal(goal)
-        logger.debug(f"Run started: {self._current_run_id}")
-        return self._current_run_id
+        logger.debug(f"Run started: {self._run_context.run_id}")
+        return self._run_context.run_id
 
     def end_run(self, run_id: str | None = None) -> None:
         """End a run and update the baseline."""
-        rid = run_id or self._current_run_id
+        rid = run_id or getattr(self._run_context, "run_id", None)
         if rid:
             self._baseline = self.calibrator.update_baseline(self.agent_id)
-        self._current_run_id = None
+        if getattr(self._run_context, "run_id", None) == rid:
+            self._run_context.run_id = None
 
     def record_event(
         self,
@@ -128,7 +131,7 @@ class DriftMonitor:
         Record a trace event and run it through all detectors.
         Returns any drift events that were detected.
         """
-        rid = run_id or self._current_run_id or uuid.uuid4().hex[:12]
+        rid = run_id or getattr(self._run_context, "run_id", None) or uuid.uuid4().hex[:12]
 
         event = TraceEvent(
             agent_id=self.agent_id,
@@ -154,8 +157,8 @@ class DriftMonitor:
                     self.store.save_drift(drift)
                     drift_events.append(drift)
 
-                    # Fire alert
-                    self.alerter.send_sync(drift)
+                    # Fire alert without blocking the monitored agent.
+                    self.alerter.send_background(drift)
 
                     # Fire callbacks
                     for cb in self._on_drift_callbacks:
@@ -184,6 +187,11 @@ class DriftMonitor:
         """Get recent drift events."""
         since = time.time() - (hours * 3600)
         return self.store.get_drift_events(agent_id=self.agent_id, since=since, limit=limit)
+
+    def close(self) -> None:
+        """Release local storage and background alert resources."""
+        self.alerter.close()
+        self.store.close()
 
 
 class _LangChainWrapper:

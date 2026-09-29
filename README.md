@@ -1,276 +1,325 @@
-
-
-
 # DriftShield Mini
-```markdown
-Privacy-first, zero-infrastructure drift detection for AI agents.
 
-Your LangChain agent just called the same API 47 times. Your CrewAI crew burned £200 in tokens overnight. Your research agent started writing marketing copy instead of financial summaries.
+Privacy-first, local-first behavioural monitoring for AI agents.
 
-You didn't find out until morning.
+DriftShield Mini runs alongside an agent and looks for three observable forms of abnormal behaviour:
 
-DriftShield Mini catches this stuff in real-time.It wraps your existing agent, watches what it does, and pings you on Slack or Discord the moment something goes sideways. No dashboard. No cloud. No account to create. Just a local Python library running alongside your agent.
+1. **Action loops** — repeated tool calls or repeating tool-name sequences.
+2. **Goal drift** — semantic distance between an agent's declared/run goal and its textual output.
+3. **Resource spikes** — unusually high token, tool-call, or runtime consumption compared with a learned baseline, plus hard safety limits.
 
-```
+It is designed as an **in-process library**. Traces and baselines are stored locally in SQLite. Goal embeddings run locally on CPU. Optional webhook alerts can be sent to Slack, Discord, or a generic HTTP endpoint.
 
----
+> DriftShield detects behavioural signals. It does not prove that an agent has violated its task or that an alert is always a failure. Production deployments should tune thresholds and evaluate false positives/negatives against their own workloads.
 
-##  Installation
+## Installation
 
-Install the updated v0.2.1 package via `pip`:
-
-```bash
-pip install driftshield-mini==0.2.1
-
-```
-
-To install with specific framework extras:
+For the audited development branch, install from source:
 
 ```bash
-pip install "driftshield-mini[autogen,llama-index,langchain]"
-
+git clone https://github.com/ThirumaranAsokan/Driftshield-mini.git
+cd Driftshield-mini
+pip install -e .
 ```
 
----
+After v0.2.2 is published to PyPI, the versioned installation will be:
 
-##  What It Actually Does
-
-DriftShield Mini monitors three core vectors:
-
-1. **Loop Detection**: Is your agent calling the same tool repeatedly or stuck in an infinite cycle (e.g., `search → format → search → format`)? DriftShield flags the pattern before it eats your budget.
-2. **Goal Drift**: Is your agent staying on task? DriftShield uses local CPU embeddings to measure how far the agent's recent outputs have drifted from its initial objective.
-3. **Resource Spikes**: Is a run burning significantly more tokens or runtime than normal? DriftShield learns baseline behavior and flags anomalous executions.
-
-> **100% Local & Private**: All traces go to a local SQLite database. Embeddings run on your CPU. Nothing leaves your machine except the alerts you explicitly direct to Slack or Discord.
-
----
-
-##  Supported Frameworks (v0.2.0)
-
-Import framework-specific wrappers using `driftshield_mini`:
-
-```python
-from driftshield_mini import DriftMonitor                 # LangChain / manual API
-from driftshield_mini.crewai import DriftCrew                 # CrewAI
-from driftshield_mini.autogen import DriftAutogenAgent        # Microsoft AutoGen
-from driftshield_mini.llama_index import DriftLlamaIndexHandler  # LlamaIndex
-from driftshield_mini.openai_assistants import DriftOpenAIClient # OpenAI Assistants
-from driftshield_mini.semantic_kernel import DriftKernelFilter   # Semantic Kernel
-from driftshield_mini.haystack import DriftHaystackTracer        # Haystack
-from driftshield_mini.google_adk import DriftADKCallbacks        # Google ADK
-
+```bash
+pip install driftshield-mini==0.2.2
 ```
 
-### Quick Framework Examples
+Framework integrations are optional:
 
-####  LangChain / Custom API
+```bash
+pip install "driftshield-mini[langchain]"
+pip install "driftshield-mini[crewai]"
+pip install "driftshield-mini[autogen]"
+pip install "driftshield-mini[llama-index]"
+pip install "driftshield-mini[openai]"
+pip install "driftshield-mini[semantic-kernel]"
+pip install "driftshield-mini[haystack]"
+pip install "driftshield-mini[google-adk]"
+```
+
+Install development dependencies with:
+
+```bash
+pip install -e ".[dev]"
+```
+
+## Quick start
 
 ```python
 from driftshield_mini import DriftMonitor
 
 monitor = DriftMonitor(
     agent_id="logistics-v2",
-    alert_webhook="[https://hooks.slack.com/services/](https://hooks.slack.com/services/)...",
-    goal_description="Optimise routing plans"
+    goal_description="Optimise routing plans",
+    alert_webhook="https://hooks.slack.com/services/...",
 )
 
 agent = monitor.wrap(existing_agent)
 result = agent.invoke({"input": "optimise route for order #4821"})
 
+monitor.close()
 ```
 
-####  CrewAI
+The wrapper shown above targets the standard `invoke()` style used by the core/manual integration. Framework-specific adapters are available separately.
+
+## How detection works
+
+### 1. Action-loop detection
+
+The detector watches recent `tool_call` events.
+
+Examples it can identify include:
+
+```text
+search_inventory
+search_inventory
+search_inventory
+search_inventory
+
+or
+
+search → format → search → format → search → format
+```
+
+Detection is based on observed tool names and sequence repetition. It does **not** inspect tool semantics or prove that repeated calls are invalid.
+
+### 2. Goal drift
+
+The goal detector embeds the declared goal and textual agent output with the local `sentence-transformers/all-MiniLM-L6-v2` model and compares them using cosine similarity.
+
+A similarity threshold can be supplied directly:
 
 ```python
-from driftshield_mini.crewai import DriftCrew
-
-crew = DriftCrew(
-    crew=existing_crew,
-    agent_id="research-team-v1",
-    alert_webhook="[https://discord.com/api/webhooks/](https://discord.com/api/webhooks/)...",
+DriftMonitor(
+    agent_id="research-agent",
+    goal_description="Summarise financial reports",
+    similarity_threshold=0.5,
 )
-
-result = crew.kickoff()
-
 ```
 
-####  Microsoft AutoGen
+During calibration, DriftShield also records run-level goal/output similarity statistics. When enough valid goal/output samples exist, the calibrated baseline can contribute to the threshold.
+
+Semantic similarity is a monitoring signal, not a formal task-correctness test.
+
+### 3. Resource spikes
+
+DriftShield maintains run-level totals for:
+
+- token consumption
+- tool calls
+- execution duration
+
+After calibration, these are compared with the stored baseline. Independent hard limits also protect against extreme resource consumption before a statistical baseline exists.
+
+## Calibration
+
+Calibration is configurable:
 
 ```python
-monitored = DriftAutogenAgent(
-    agent=assistant, 
-    agent_id="autogen-analyst-v1",
-    alert_webhook="[https://hooks.slack.com/](https://hooks.slack.com/)..."
+DriftMonitor(
+    agent_id="my-agent",
+    calibration_runs=30,
 )
-user_proxy.initiate_chat(monitored.agent, message="Summarise Q3 results")
-
 ```
 
-####  LlamaIndex
+The baseline currently contains:
+
+- mean/std tokens per run
+- mean/std tools per run
+- mean/std duration
+- common action sequences
+- mean/std goal similarity when valid goal/output samples are available
+
+The baseline is recalculated from recent stored runs up to the configured calibration window. Therefore, this is an **adaptive rolling baseline**, not a permanently frozen first-30-run baseline.
+
+Extreme safety limits and loop detection can still produce alerts during calibration.
+
+For production use, baseline contamination and changing workload distributions should be evaluated with representative data.
+
+## Alerts
+
+Alerts can be delivered through:
+
+- Slack webhooks
+- Discord webhooks
+- generic HTTP webhooks
+
+Webhook delivery is dispatched in the background so a slow or unavailable notification endpoint does not block the monitored agent.
+
+The alert dispatcher also applies severity filtering and a per-agent/per-detector cooldown.
+
+Example:
 
 ```python
-from llama_index.core.callbacks import CallbackManager
-from llama_index.core import Settings
-
-handler = DriftLlamaIndexHandler(agent_id="rag-agent-v1", goal_description="Answer policy questions")
-Settings.callback_manager = CallbackManager([handler.callback_handler])
-
+monitor = DriftMonitor(
+    agent_id="my-agent",
+    alert_webhook="https://example.com/webhook",
+    min_alert_severity="HIGH",
+    alert_cooldown=60,
+)
 ```
 
-####  OpenAI Assistants
+Do not place credentials or sensitive data directly in source code. Treat webhook URLs as secrets.
+
+## Local storage
+
+By default, DriftShield stores data in:
+
+```text
+~/.driftshield/driftshield.db
+```
+
+You can provide another path:
 
 ```python
-client = DriftOpenAIClient(openai.OpenAI(), agent_id="assistant-v1", goal_description="Process invoices")
-client.run_assistant(thread_id=t.id, assistant_id=a.id)
-
+DriftMonitor(
+    agent_id="my-agent",
+    db_path="/path/to/driftshield.db",
+)
 ```
 
-####  Semantic Kernel
+SQLite uses WAL mode and thread-local connections.
 
-```python
-DriftKernelFilter(agent_id="sk-agent-v1", goal_description="Reconcile invoices").apply_to_kernel(kernel)
+Traces may contain agent inputs, outputs, tool names and metadata. Local storage does not automatically make sensitive data safe; apply your own retention and access controls.
 
-```
+## Offline / air-gapped embedding model
 
-####  Haystack
+The goal detector uses `sentence-transformers/all-MiniLM-L6-v2`.
 
-```python
-DriftHaystackTracer(agent_id="haystack-v1").enable()   # Call once before running pipelines
-
-```
-
-####  Google ADK
-
-```python
-drift = DriftADKCallbacks(agent_id="adk-v1")
-agent = Agent(..., before_tool_callback=drift.before_tool, after_tool_callback=drift.after_tool)
-
-```
-
----
-
-##  How Calibration Works
-
-For the first 30 runs (configurable), DriftShield quietly observes your agent to establish baseline averages for token consumption, execution times, and tool call sequences. No alerts are fired during this warm-up phase.
-
-Once calibrated, it flags statistical anomalies. You can inspect your agent's baseline at any time:
+To prepare a local model:
 
 ```bash
-driftshield baseline my-agent
-
-```
-
-> **Note**: Even during initial calibration, DriftShield uses hard safety bounds to flag extreme loops (such as 50 identical sequential tool calls).
-
----
-
-##  Sample Alert Payload
-
-When drift is detected, structured payloads are dispatched to your configured webhook:
-
-```json
-{
-  "agent_id": "logistics-v2",
-  "detector": "action_loop",
-  "severity": "HIGH",
-  "message": "Action loop: search_inventory called 6x in 45s",
-  "suggested_action": "Check search_inventory input/output for stale data or error loops",
-  "context": {
-    "tool_name": "search_inventory",
-    "repeat_count": 6,
-    "recent_actions": ["search_inventory", "search_inventory", "search_inventory"]
-  }
-}
-
-```
-
----
-
-##  CLI Reference
-
-### Commands Overview
-
-| Command | Description |
-| --- | --- |
-| `alerts` | View recent drift alerts across agents. |
-| `baseline` | Show calculated baseline statistics for an agent. |
-| `download-model` | Download embedding models for offline/air-gapped execution. |
-| `export` | Export compliance logs formatted for regulatory frameworks (FCA / EU AI Act). |
-| `runs` | List recent execution runs for an agent. |
-| `traces` | View detailed trace logs for specific agent runs. |
-
-### CLI Usage Examples
-
-```bash
-# View alerts triggered in the last 24 hours
-driftshield alerts --last 24h
-
-# Inspect execution traces for a specific run
-driftshield traces logistics-v2 --run latest
-
-# Export audit logs for compliance (CSV or JSON)
-driftshield export --agent logistics-v2 --output audit.csv
-driftshield export --agent logistics-v2 --output drift.json --drift-only --format json
-
-# Pre-download embedding models for air-gapped environments
 driftshield download-model
-
 ```
 
----
+The loader checks the packaged model and local Hugging Face cache first. If no local model is available, the current implementation can fall back to downloading the model. For genuinely air-gapped operation, pre-stage the model before deployment.
 
-##  Detailed Configuration Options
+## Supported integrations
 
-Defaults are pre-tuned, but all parameters can be customized programmatically:
+Current adapters include:
 
 ```python
 from driftshield_mini import DriftMonitor
-
-monitor = DriftMonitor(
-    agent_id="my-agent",
-    alert_webhook="[https://hooks.slack.com/](https://hooks.slack.com/)...",
-    goal_description="Summarise financial reports",
-    calibration_runs=30,         # Runs before baseline detection activates
-    loop_window=20,              # Number of recent actions inspected for loops
-    loop_max_repeats=4,          # Repeated tool calls allowed before alerting
-    similarity_threshold=0.5,    # Goal drift sensitivity (lower = stricter)
-    spike_multiplier=2.5,        # Standard deviation multiplier for resource spikes
-    min_alert_severity="MED",    # Minimum severity required to trigger webhooks
-    alert_cooldown=60.0          # Seconds to wait before resending duplicate alerts
-)
-
+from driftshield_mini.crewai import DriftCrew
+from driftshield_mini.autogen import DriftAutogenAgent
+from driftshield_mini.llama_index import DriftLlamaIndexHandler
+from driftshield_mini.openai_assistants import DriftOpenAIClient
+from driftshield_mini.semantic_kernel import DriftKernelFilter
+from driftshield_mini.haystack import DriftHaystackTracer
+from driftshield_mini.google_adk import DriftADKCallbacks
 ```
 
----
+Framework APIs change frequently. The AutoGen adapter currently targets the legacy `pyautogen` 0.2.x API (`pyautogen>=0.2,<0.3`). The OpenAI adapter currently targets the legacy Assistants/Threads API exposed by the OpenAI Python client. Compatibility should be tested against the exact framework/client versions used by your deployment.
 
-##  Programmatic Hooks
+## CLI
 
-Attach custom event listeners to act on alerts programmatically:
+```bash
+# Recent alerts
+driftshield alerts --last 24h
+
+# Baseline
+driftshield baseline my-agent
+
+# Runs
+driftshield runs my-agent
+
+# Traces
+driftshield traces my-agent --run latest
+
+# Export trace records
+driftshield export --agent my-agent --output audit.csv
+
+# Export drift incidents
+driftshield export --agent my-agent --output drift.json --drift-only --format json
+
+# Prepare the embedding model locally
+driftshield download-model
+```
+
+Exports are structured trace/incident records in CSV or JSON. They can support audit and compliance workflows; **exporting records does not by itself establish FCA, EU AI Act, or other regulatory compliance.**
+
+## Programmatic drift callbacks
 
 ```python
 def handle_drift(event):
     if event.severity.value == "CRITICAL":
-        agent.stop()        # Terminate execution
-        notify_oncall()     # Trigger on-call notification
+        agent.stop()
 
 monitor.on_drift(handle_drift)
-
 ```
 
----
+Callbacks run in the monitoring path, so application callbacks should be short and failure-tolerant.
 
-##  Why I Built This
+## Configuration
 
-I kept hearing the same story: a developer builds an agent, it passes local tests, but runs wild overnight in production leaving them with a high API bill and a broken service. Complex observability platforms exist, but they often require hosted infrastructure, SaaS sign-ups, and dashboard overhead.
-
-DriftShield Mini is designed as a minimal, lightweight utility to inform you when an agent strays off course, with zero external platform dependencies.
-
----
-
-##  License
-
-Distributed under the [MIT License](LICENSE).
-
+```python
+monitor = DriftMonitor(
+    agent_id="my-agent",
+    goal_description="Summarise financial reports",
+    calibration_runs=30,
+    loop_window=20,
+    loop_max_repeats=4,
+    similarity_threshold=0.5,
+    spike_multiplier=2.5,
+    min_alert_severity="MED",
+    alert_cooldown=60.0,
+)
 ```
 
+These are starting points, not universal optimal values. Evaluate them against your workload.
+
+## Engineering status
+
+DriftShield Mini is currently an **alpha-stage engineering project**.
+
+The project has:
+
+- local SQLite trace storage
+- three detector families
+- configurable baselines
+- local embeddings
+- webhook alerts
+- CLI inspection/export
+- framework adapters
+- automated tests and CI for supported Python versions
+
+The next important validation step is a reproducible benchmark measuring:
+
+- true positives
+- false positives
+- false negatives
+- detection latency
+- monitoring overhead
+- behaviour under contaminated/non-stationary baselines
+
+## Development
+
+Run the test suite:
+
+```bash
+pytest -q
 ```
+
+Run linting:
+
+```bash
+ruff check .
+```
+
+## Why I built this
+
+AI agents can fail in ways that ordinary request/response monitoring does not capture: repeated tool loops, semantic task deviation, and unexpectedly expensive execution.
+
+DriftShield Mini is intended to provide a small, local monitoring layer that can sit beside an existing agent without requiring a separate observability service.
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
+
+## Project
+
+GitHub: https://github.com/ThirumaranAsokan/Driftshield-mini

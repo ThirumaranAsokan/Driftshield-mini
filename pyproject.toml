@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "driftshield-mini"
-version = "0.2.1"
+version = "0.2.2"
 description = "Privacy-first, zero-infrastructure drift detection for AI agents — LangChain, CrewAI, AutoGen, LlamaIndex, OpenAI Assistants, Semantic Kernel, Haystack, Google ADK"
 readme = "README.md"
 license = {text = "MIT"}
@@ -26,7 +26,6 @@ classifiers = [
 
 dependencies = [
     "sentence-transformers>=2.2.0",
-    "scikit-learn>=1.3.0",
     "numpy>=1.24.0",
     "click>=8.1.0",
     "httpx>=0.25.0",
@@ -36,7 +35,7 @@ dependencies = [
 [project.optional-dependencies]
 langchain = ["langchain>=0.1.0", "langchain-core>=0.1.0"]
 crewai = ["crewai>=0.1.0"]
-autogen = ["pyautogen>=0.2.0"]
+autogen = ["pyautogen>=0.2.0,<0.3.0"]
 llama-index = ["llama-index-core>=0.10.0"]
 openai = ["openai>=1.30.0"]
 semantic-kernel = ["semantic-kernel>=1.0.0"]
