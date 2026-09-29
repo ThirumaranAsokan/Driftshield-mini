@@ -52,7 +52,7 @@ class ResourceSpikeDetector(BaseDetector):
             }
             # Cleanup old counters (keep last 10)
             if len(self._run_counters) > 10:
-                oldest = sorted(self._run_counters.keys())[0]
+                oldest = min(self._run_counters)
                 del self._run_counters[oldest]
         return self._run_counters[run_id]
 
