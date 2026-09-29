@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from driftshield.models import BaselineStats, DriftEvent, TraceEvent
+from driftshield_mini.models import BaselineStats, DetectorType, DriftEvent, Severity, TraceEvent
 
 DEFAULT_DB_PATH = Path.home() / ".driftshield" / "driftshield.db"
 
@@ -269,8 +269,8 @@ class TraceStore:
             event_id=row["event_id"],
             agent_id=row["agent_id"],
             run_id=row["run_id"],
-            detector=row["detector"],
-            severity=row["severity"],
+            detector=DetectorType(row["detector"]) if isinstance(row["detector"], str) else row["detector"],
+            severity=Severity(row["severity"]) if isinstance(row["severity"], str) else row["severity"],
             score=row["score"],
             message=row["message"],
             suggested_action=row["suggested_action"],

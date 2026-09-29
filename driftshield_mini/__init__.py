@@ -1,21 +1,21 @@
 """
-DriftShield — Real-time behavioural drift detection for agentic AI systems.
+DriftShield-Mini — Real-time behavioural drift detection for agentic AI systems.
 
-Usage:
-    from driftshield import DriftMonitor
-
-    monitor = DriftMonitor(
-        agent_id="my-agent",
-        alert_webhook="https://hooks.slack.com/...",
-    )
-    agent = monitor.wrap(existing_agent)
-    result = agent.invoke({"input": "do the thing"})
+Framework integrations:
+    from driftshield_mini import DriftMonitor                    # LangChain / manual
+    from driftshield_mini.crewai import DriftCrew                 # CrewAI
+    from driftshield_mini.autogen import DriftAutogenAgent        # Microsoft AutoGen
+    from driftshield_mini.llama_index import DriftLlamaIndexHandler  # LlamaIndex
+    from driftshield_mini.openai_assistants import DriftOpenAIClient # OpenAI Assistants
+    from driftshield_mini.semantic_kernel import DriftKernelFilter   # Semantic Kernel
+    from driftshield_mini.haystack import DriftHaystackTracer        # Haystack
+    from driftshield_mini.google_adk import DriftADKCallbacks        # Google ADK
 """
 
-from driftshield.models import BaselineStats, DetectorType, DriftEvent, Severity, TraceEvent
-from driftshield.monitor import DriftMonitor
+from driftshield_mini.models import BaselineStats, DetectorType, DriftEvent, Severity, TraceEvent
+from driftshield_mini.monitor import DriftMonitor
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "DriftMonitor",
