@@ -1,0 +1,17 @@
+name: Temporary Nebius analysis
+
+on:
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install external validation dependency
+        run: python -m pip install -e ".[external-validation]"
+      - name: Analyze 1000 Nebius trajectories
+        run: python benchmarks/analyze_swe_agent_trajectories.py --limit 1000
