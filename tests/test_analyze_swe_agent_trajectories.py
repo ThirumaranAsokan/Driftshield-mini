@@ -8,6 +8,15 @@ def test_extract_actions_from_swe_style_text():
     assert extract_actions(text) == ["ls -la"]
 
 
+def test_extract_actions_from_nebius_apply_patch_text():
+    text = """Will execute following command for apply_patch: ```
+cd //repo && git apply -v patch.diff --allow-empty
+```"""
+    assert extract_actions(text) == [
+        "apply_patch: cd //repo && git apply -v patch.diff --allow-empty"
+    ]
+
+
 def test_extract_signals_counts_ai_text_and_actions():
     row = {
         "target": False,
