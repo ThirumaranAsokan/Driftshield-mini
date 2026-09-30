@@ -49,6 +49,7 @@ def validate_dataset(path: Path) -> dict:
         raise ValueError("Dataset must contain a non-empty 'scenarios' list")
 
     counts = Counter()
+    latency_samples: dict[str, list[int]] = {detector.value: [] for detector in DetectorType}
     run_results = []
 
     with tempfile.TemporaryDirectory(prefix="driftshield-validation-") as tmp:
@@ -67,8 +68,9 @@ def validate_dataset(path: Path) -> dict:
             for run in scenario["runs"]:
                 run_id = monitor.start_run(run_id=str(run["run_id"]))
                 predicted: set[DetectorType] = set()
+                first_detection_index: dict[DetectorType, int] = {}
 
-                for event in run["events"]:
+                for event_index, event in enumerate(run["events"]):
                     detected = monitor.record_event(
                         str(event["action_type"]),
                         str(event["action_name"]),
@@ -79,7 +81,9 @@ def validate_dataset(path: Path) -> dict:
                         output_data=dict(event.get("output_data", {})),
                         metadata=dict(event.get("metadata", {})),
                     )
-                    predicted.update(item.detector for item in detected)
+                    for item in detected:
+                        predicted.add(item.detector)
+                        first_detection_index.setdefault(item.detector, event_index)
 
                 expected = _detectors(list(run.get("expected_detectors", [])))
                 for detector in DetectorType:
@@ -94,11 +98,21 @@ def validate_dataset(path: Path) -> dict:
                     else:
                         counts[f"{detector.value}.tn"] += 1
 
+                latency = {}
+                for detector in sorted(expected, key=lambda item: item.value):
+                    if detector in first_detection_index:
+                        value = first_detection_index[detector] + 1
+                        latency[detector.value] = value
+                        latency_samples[detector.value].append(value)
+                    else:
+                        latency[detector.value] = None
+
                 run_results.append({
                     "scenario": name,
                     "run_id": run_id,
                     "expected": sorted(item.value for item in expected),
                     "predicted": sorted(item.value for item in predicted),
+                    "detection_latency_events": latency,
                 })
                 monitor.end_run(run_id)
 
@@ -114,8 +128,11 @@ def validate_dataset(path: Path) -> dict:
         recall = tp / (tp + fn) if tp + fn else 0.0
         f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
         fpr = fp / (fp + tn) if fp + tn else 0.0
+        samples = latency_samples[detector.value]
         metrics[detector.value] = {
             "tp": tp, "fp": fp, "fn": fn, "tn": tn,
+            "mean_detection_latency_events": round(sum(samples) / len(samples), 4) if samples else None,
+            "max_detection_latency_events": max(samples) if samples else None,
             "precision": round(precision, 4),
             "recall": round(recall, 4),
             "f1": round(f1, 4),
