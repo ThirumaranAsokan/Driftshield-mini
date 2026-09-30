@@ -47,3 +47,21 @@ The existing overhead measurement is a low-level reference comparison and is not
 production performance claim. Production overhead should be measured with the same
 agent workload with and without monitoring, using representative traces and
 reporting latency, CPU, memory, storage growth, and events/sec.
+
+
+## Baseline robustness diagnostic
+
+`baseline_robustness.py` exercises three controlled workloads:
+
+- stable calibration
+- calibration containing one extreme outlier
+- a step-change in workload
+
+It reports the resulting mean/std baseline and whether a follow-up workload
+produces a resource-spike alert. This is intended to expose baseline
+contamination and non-stationarity behaviour for engineering review; it is not
+a claim of production robustness.
+
+Run:
+
+    python benchmarks/baseline_robustness.py
