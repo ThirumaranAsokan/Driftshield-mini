@@ -44,3 +44,22 @@ def test_analysis_keeps_outcome_separate_from_detector_accuracy():
     assert "accuracy_metrics" in result
     assert result["by_target"]["target_true"]["trajectories"] == 1
     assert result["by_target"]["target_false"]["trajectories"] == 1
+
+def test_extract_signals_accepts_content_field_and_assistant_role():
+    row = {
+        "target": True,
+        "trajectory": [
+            {
+                "role": "assistant",
+                "content": (
+                    "Will execute following command for apply_patch: ```"
+                    "cd //repo && git apply patch.diff --allow-empty"
+                    "```"
+                ),
+            }
+        ],
+    }
+    signals = extract_signals(row)
+    assert signals.action_names == (
+        "apply_patch: cd //repo && git apply patch.diff --allow-empty",
+    )
