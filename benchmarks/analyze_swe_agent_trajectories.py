@@ -101,7 +101,13 @@ def extract_signals(row: dict[str, Any]) -> TrajectorySignals:
         for item in items
         if str(item.get("role", "")).lower() in {"ai", "assistant", "model"}
     )
-    actions = tuple(action for text in ai_texts for action in extract_actions(text))
+    trajectory_texts = tuple(
+        str(item.get("text") or item.get("content") or "")
+        for item in items
+    )
+    actions = tuple(
+        action for text in trajectory_texts for action in extract_actions(text)
+    )
     token_estimate = sum(max(1, len(text) // 4) for text in ai_texts)
     return TrajectorySignals(
         len(items),
