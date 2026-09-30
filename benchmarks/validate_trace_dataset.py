@@ -52,11 +52,13 @@ def validate_dataset(path: Path) -> dict:
     run_results = []
 
     with tempfile.TemporaryDirectory(prefix="driftshield-validation-") as tmp:
-        for scenario in scenarios:
+        for scenario_index, scenario in enumerate(scenarios):
             name = str(scenario["name"])
+            if not name.strip():
+                raise ValueError("Scenario name must be non-empty")
             monitor = DriftMonitor(
                 agent_id=name,
-                db_path=str(Path(tmp) / f"{name}.db"),
+                db_path=str(Path(tmp) / f"scenario-{scenario_index}.db"),
                 goal_description=str(scenario.get("goal", "")),
                 calibration_runs=int(scenario.get("calibration_runs", 30)),
                 loop_max_repeats=int(scenario.get("loop_max_repeats", 4)),
