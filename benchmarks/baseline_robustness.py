@@ -11,7 +11,8 @@ import json
 import tempfile
 from pathlib import Path
 
-from driftshield_mini import DetectorType, DriftMonitor
+from driftshield_mini import DriftMonitor
+from driftshield_mini.models import DetectorType
 
 
 SCENARIOS = {
