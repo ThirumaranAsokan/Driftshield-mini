@@ -1,0 +1,20 @@
+{
+  "scenarios": [{
+    "name": "REPLACE_WITH_AGENT_NAME",
+    "goal": "REPLACE_WITH_AGENT_GOAL",
+    "calibration_runs": 30,
+    "runs": [{
+      "run_id": "REPLACE_WITH_RUN_ID",
+      "expected_detectors": [],
+      "events": [{
+        "action_type": "tool_call",
+        "action_name": "REPLACE_WITH_ACTION",
+        "token_count": 0,
+        "duration_ms": 0,
+        "input_data": {},
+        "output_data": {},
+        "metadata": {}
+      }]
+    }]
+  }]
+}
