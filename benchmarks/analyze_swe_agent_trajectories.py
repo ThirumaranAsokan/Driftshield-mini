@@ -4,9 +4,10 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 TOOL_NAMES = {"apply_patch", "bash", "cat", "cd", "find", "git", "grep", "ls",
               "mkdir", "python", "pytest", "rg", "sed", "tail", "touch", "vim"}
@@ -40,7 +41,7 @@ def extract_actions(text: str) -> list[str]:
     for line in text.splitlines():
         stripped = line.strip()
         lowered = stripped.lower()
-        if lowered.startswith("action:") or lowered.startswith("command:"):
+        if lowered.startswith(("action:", "command:")):
             action = _normalise_action(stripped.split(":", 1)[1])
             if action:
                 actions.append(action)
