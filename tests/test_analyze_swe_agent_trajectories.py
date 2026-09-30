@@ -1,0 +1,37 @@
+import json
+
+from benchmarks.analyze_swe_agent_trajectories import analyse_rows, extract_actions, extract_signals
+
+
+def test_extract_actions_from_swe_style_text():
+    text = "Action: ls -la\n"
+    assert extract_actions(text) == ["ls -la"]
+
+
+def test_extract_signals_counts_ai_text_and_actions():
+    row = {
+        "target": False,
+        "trajectory": json.dumps([
+            {"role": "system", "text": "system"},
+            {"role": "ai", "text": "Action: ls\n"},
+            {"role": "user", "text": "files"},
+            {"role": "ai", "text": "Action: ls\n"},
+            {"role": "ai", "text": "Action: ls\n"},
+            {"role": "ai", "text": "Action: ls\n"},
+        ]),
+    }
+    signals = extract_signals(row)
+    assert signals.steps == 6
+    assert signals.max_consecutive_action == 4
+
+
+def test_analysis_keeps_outcome_separate_from_detector_accuracy():
+    rows = [
+        {"target": True, "trajectory": [{"role": "ai", "text": "Action: ls"}]},
+        {"target": False, "trajectory": [{"role": "ai", "text": "Action: ls"}]},
+    ]
+    result = analyse_rows(rows)
+    assert result["rows_analyzed"] == 2
+    assert "accuracy_metrics" in result
+    assert result["by_target"]["target_true"]["trajectories"] == 1
+    assert result["by_target"]["target_false"]["trajectories"] == 1
