@@ -121,8 +121,7 @@ def main() -> None:
     result = analyse_rows(load_rows(args.limit, args.split), args.loop_repeats, args.token_limit)
     rendered = json.dumps(result, indent=2, sort_keys=True)
     if args.output:
-        args.output.write_text(rendered + "
-", encoding="utf-8")
+        args.output.write_text(rendered + "\n", encoding="utf-8")
     else:
         print(rendered)
 
