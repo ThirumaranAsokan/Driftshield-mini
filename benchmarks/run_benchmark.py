@@ -23,7 +23,8 @@ class FakeEmbedder:
 
     def encode(self, text: str):
         text = str(text).lower()
-        relevant = any(word in text for word in ("financial", "finance", "report"))\n        return [1.0, 0.0] if relevant else [0.0, 1.0]
+        relevant = any(word in text for word in ("financial", "finance", "report"))
+        return [1.0, 0.0] if relevant else [0.0, 1.0]
 
 
 @dataclass(frozen=True)
