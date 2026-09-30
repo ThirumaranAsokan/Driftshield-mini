@@ -197,10 +197,15 @@ def measure_overhead(repetitions: int = 3, events_per_run: int = 100) -> dict[st
 
 
 def main() -> None:
+    from driftshield_mini.baseline import load_embedding_model as baseline_loader
     from driftshield_mini.detectors import goal_drift
 
-    original_loader = goal_drift.load_embedding_model
-    goal_drift.load_embedding_model = lambda: FakeEmbedder()
+    fake_loader = lambda: FakeEmbedder()
+    original_detector_loader = goal_drift.load_embedding_model
+    original_baseline_loader = baseline_loader
+    goal_drift.load_embedding_model = fake_loader
+    import driftshield_mini.baseline as baseline_module
+    baseline_module.load_embedding_model = fake_loader
     try:
         predictions = {}
         latencies = {}
@@ -217,7 +222,8 @@ def main() -> None:
         }
         print(json.dumps(result, indent=2, sort_keys=True))
     finally:
-        goal_drift.load_embedding_model = original_loader
+        goal_drift.load_embedding_model = original_detector_loader
+        baseline_module.load_embedding_model = original_baseline_loader
 
 
 if __name__ == "__main__":
