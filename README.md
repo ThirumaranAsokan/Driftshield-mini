@@ -323,3 +323,6 @@ MIT License. See [LICENSE](LICENSE).
 ## Project
 
 GitHub: https://github.com/ThirumaranAsokan/Driftshield-mini
+
+### Real-trace validation metrics
+The labelled trace validator reports TP/FP/FN/TN, precision, recall, F1, false-positive rate, and event-level detection latency. Latency is measured as the 1-based event position of the first detection within a labelled run; it is not wall-clock latency.
