@@ -192,7 +192,11 @@ def measure_overhead(repetitions: int = 3, events_per_run: int = 100) -> dict[st
         "events_per_run": events_per_run,
         "baseline_ms": round(baseline * 1000, 3),
         "monitored_ms": round(monitored * 1000, 3),
-        "estimated_overhead_percent": round(overhead, 2),
+        "relative_to_minimal_event_construction_percent": round(overhead, 2),
+        "monitored_ms_per_event": round((monitored / events_per_run) * 1000, 4),
+        "monitored_events_per_second": round(events_per_run / monitored, 2)
+        if monitored
+        else 0.0,
     }
 
 
@@ -213,6 +217,21 @@ def main() -> None:
             detected, first_detection = run_case(case)
             predictions[case.name] = detected
             latencies[case.name] = first_detection
+
+        expected = {case.name: set(case.expected) for case in CASES}
+        mismatches = {
+            name: {
+                "expected": sorted(detector.value for detector in expected[name]),
+                "predicted": sorted(detector.value for detector in predictions[name]),
+            }
+            for name in expected
+            if predictions[name] != expected[name]
+        }
+        if mismatches:
+            raise AssertionError(
+                "Labelled benchmark regression detected: "
+                + json.dumps(mismatches, sort_keys=True)
+            )
 
         result = {
             "case_count": len(CASES),
