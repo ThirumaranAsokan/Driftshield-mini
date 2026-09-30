@@ -28,3 +28,21 @@ jobs:
 
       - name: Test
         run: pytest -q --cov=driftshield_mini/alerts --cov=driftshield_mini/baseline --cov=driftshield_mini/detectors --cov=driftshield_mini/embeddings.py --cov=driftshield_mini/export.py --cov=driftshield_mini/google_adk.py --cov=driftshield_mini/models.py --cov=driftshield_mini/monitor.py --cov=driftshield_mini/storage --cov-report=term-missing --cov-fail-under=75
+
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run labelled benchmark
+        run: python benchmarks/run_benchmark.py
