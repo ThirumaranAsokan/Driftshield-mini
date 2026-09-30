@@ -197,7 +197,7 @@ def measure_overhead(repetitions: int = 3, events_per_run: int = 100) -> dict[st
 
 
 def main() -> None:
-    import driftshield_mini.detectors.goal_drift as goal_drift
+    from driftshield_mini.detectors import goal_drift
 
     original_loader = goal_drift.load_embedding_model
     goal_drift.load_embedding_model = lambda: FakeEmbedder()
