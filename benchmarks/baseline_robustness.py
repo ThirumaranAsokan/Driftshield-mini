@@ -13,7 +13,6 @@ from pathlib import Path
 
 from driftshield_mini import DriftMonitor
 
-
 SCENARIOS = {
     "stable": [100, 100, 100, 100],
     "contaminated": [100, 100, 100, 1000],
