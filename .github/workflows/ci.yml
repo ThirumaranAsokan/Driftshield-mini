@@ -27,4 +27,4 @@ jobs:
         run: ruff check .
 
       - name: Test
-        run: pytest -q
+        run: pytest -q --cov=driftshield_mini/alerts --cov=driftshield_mini/baseline --cov=driftshield_mini/detectors --cov=driftshield_mini/embeddings.py --cov=driftshield_mini/export.py --cov=driftshield_mini/google_adk.py --cov=driftshield_mini/models.py --cov=driftshield_mini/monitor.py --cov=driftshield_mini/storage --cov-report=term-missing --cov-fail-under=75

@@ -67,7 +67,7 @@ class DriftADKCallbacks:
             input_data={k: str(v)[:500] for k, v in (tool_args or {}).items()},
             metadata={"framework": "google_adk", "tool_name": name},
         )
-        return None  # None = proceed with the tool call
+
 
     def after_tool(self, tool: Any, tool_args: dict, tool_context: Any, tool_response: Any) -> Any:
         """ADK after_tool_callback. Return the response unchanged."""

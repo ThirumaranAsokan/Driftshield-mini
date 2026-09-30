@@ -287,7 +287,7 @@ The project has:
 - framework adapters
 - automated tests and CI for supported Python versions
 
-The next important validation step is a reproducible benchmark measuring:
+The benchmark suite in `tests/test_benchmark.py` provides deterministic detector cases. The next validation step is to run it against representative real traces and report:
 
 - true positives
 - false positives

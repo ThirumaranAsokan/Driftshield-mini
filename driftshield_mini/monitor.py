@@ -6,8 +6,8 @@ import logging
 import threading
 import time
 import uuid
-from functools import wraps
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from driftshield_mini.alerts import AlertDispatcher
 from driftshield_mini.baseline import Calibrator
@@ -204,7 +204,11 @@ class _LangChainWrapper:
     def invoke(self, input_data: dict[str, Any], **kwargs: Any) -> Any:
         """Wrap the standard LangChain invoke method."""
         run_id = self._monitor.start_run(
-            goal=input_data.get("input", "") or input_data.get("query", "")
+            goal=(
+                input_data.get("input", "") or input_data.get("query", "")
+            )
+            if not self._monitor.goal_drift.goal_description
+            else None
         )
 
         start = time.time()

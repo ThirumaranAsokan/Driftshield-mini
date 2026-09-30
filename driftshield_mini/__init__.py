@@ -18,10 +18,10 @@ from driftshield_mini.monitor import DriftMonitor
 __version__ = "0.2.2"
 
 __all__ = [
-    "DriftMonitor",
-    "TraceEvent",
-    "DriftEvent",
     "BaselineStats",
     "DetectorType",
+    "DriftEvent",
+    "DriftMonitor",
     "Severity",
+    "TraceEvent",
 ]

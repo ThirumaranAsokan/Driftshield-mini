@@ -41,7 +41,7 @@ openai = ["openai>=1.30.0"]
 semantic-kernel = ["semantic-kernel>=1.0.0"]
 haystack = ["haystack-ai>=2.0.0"]
 google-adk = ["google-adk>=0.1.0"]
-dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "ruff>=0.1.0"]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "ruff>=0.1.0", "pytest-cov>=4.0"]
 
 [project.scripts]
 driftshield = "driftshield_mini.cli:cli"
@@ -59,3 +59,6 @@ driftshield_mini = ["models/**/*"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+ignore = ["BLE001", "S110"]

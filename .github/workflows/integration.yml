@@ -1,0 +1,50 @@
+name: Integration
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  adapters:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: langchain
+            extra: langchain
+            module: driftshield_mini.monitor
+          - name: crewai
+            extra: crewai
+            module: driftshield_mini.crewai
+          - name: autogen
+            extra: autogen
+            module: driftshield_mini.autogen
+          - name: llama-index
+            extra: llama-index
+            module: driftshield_mini.llama_index
+          - name: openai
+            extra: openai
+            module: driftshield_mini.openai_assistants
+          - name: semantic-kernel
+            extra: semantic-kernel
+            module: driftshield_mini.semantic_kernel
+          - name: haystack
+            extra: haystack
+            module: driftshield_mini.haystack
+          - name: google-adk
+            extra: google-adk
+            module: driftshield_mini.google_adk
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install adapter
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,${{ matrix.extra }}]"
+      - name: Import adapter
+        run: python -c "import importlib; importlib.import_module('${{ matrix.module }}')"

@@ -6,9 +6,9 @@ import logging
 
 import numpy as np
 
-from driftshield_mini.models import BaselineStats
 from driftshield_mini.detectors.goal_drift import cosine_similarity
 from driftshield_mini.embeddings import load_embedding_model
+from driftshield_mini.models import BaselineStats
 from driftshield_mini.storage import TraceStore
 
 logger = logging.getLogger(__name__)

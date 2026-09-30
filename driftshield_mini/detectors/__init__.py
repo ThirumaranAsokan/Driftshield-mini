@@ -6,8 +6,8 @@ from driftshield_mini.detectors.goal_drift import GoalDriftDetector
 from driftshield_mini.detectors.resource_spike import ResourceSpikeDetector
 
 __all__ = [
-    "BaseDetector",
     "ActionLoopDetector",
+    "BaseDetector",
     "GoalDriftDetector",
     "ResourceSpikeDetector",
 ]

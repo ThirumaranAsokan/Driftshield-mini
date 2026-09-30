@@ -13,7 +13,7 @@ warnings.warn(
     stacklevel=2,
 )
 
-from driftshield_mini import *  # noqa: F401,F403
+from driftshield_mini import *
 from driftshield_mini import (  # noqa: F401
     BaselineStats,
     DetectorType,

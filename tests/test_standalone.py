@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from driftshield_mini.export import export_drift_events, export_traces
+from driftshield_mini.export import export_traces
 from driftshield_mini.monitor import DriftMonitor
 from driftshield_mini.storage import TraceStore
 

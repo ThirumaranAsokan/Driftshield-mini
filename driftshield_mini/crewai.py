@@ -62,14 +62,14 @@ class DriftCrew:
         """
         try:
             from crewai.utilities.events import crewai_event_bus
+            from crewai.utilities.events.llm_events import (
+                LLMCallCompletedEvent,
+                LLMCallStartedEvent,
+            )
             from crewai.utilities.events.tool_usage_events import (
                 ToolUsageErrorEvent,
                 ToolUsageFinishedEvent,
                 ToolUsageStartedEvent,
-            )
-            from crewai.utilities.events.llm_events import (
-                LLMCallCompletedEvent,
-                LLMCallStartedEvent,
             )
         except ImportError:
             logger.warning(

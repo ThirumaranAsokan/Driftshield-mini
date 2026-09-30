@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import threading
 import time
-from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from typing import Any
 
 from driftshield_mini.models import DriftEvent
