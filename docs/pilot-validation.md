@@ -24,3 +24,7 @@ Use:
 Report trace population, date range, workload characteristics, calibration/holdout
 sizes, retention/redaction policy, and webhook configuration. Synthetic benchmark
 metrics and synthetic overhead must not be presented as production performance.
+
+## Evidence report
+
+After running the labelled trace validator, use `benchmarks/build_evidence_report.py validation.json --output evidence.md` to format measured metrics consistently. The generator does not infer missing data or labels.
