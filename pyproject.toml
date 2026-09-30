@@ -62,3 +62,6 @@ target-version = "py310"
 
 [tool.ruff.lint]
 ignore = ["BLE001", "S110"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
