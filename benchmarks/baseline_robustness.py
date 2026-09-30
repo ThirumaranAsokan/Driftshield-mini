@@ -11,7 +11,6 @@ import json
 import tempfile
 from pathlib import Path
 
-from driftshield_mini.models import DetectorType
 from driftshield_mini.monitor import DriftMonitor
 
 
@@ -47,7 +46,7 @@ def run(name: str, calibration: list[int], follow_up: int) -> dict:
         detected = sorted(
             event.detector.value
             for event in events
-            if event.detector == DetectorType.RESOURCE_SPIKE
+            if event.detector.value == "resource_spike"
         )
         return {
             "scenario": name,
