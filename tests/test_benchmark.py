@@ -97,6 +97,74 @@ def test_goal_drift_case(tmp_path, monkeypatch):
     assert DetectorType.GOAL_DRIFT in detected
 
 
+def test_resource_spike_against_calibrated_baseline(tmp_path):
+    monitor = DriftMonitor(
+        agent_id="resource-baseline",
+        db_path=str(tmp_path / "resource-baseline.db"),
+        calibration_runs=3,
+    )
+
+    for index in range(3):
+        run_id = monitor.start_run(run_id=f"normal-{index}")
+        monitor.record_event(
+            "llm_request",
+            "normal",
+            run_id=run_id,
+            token_count=100,
+            duration_ms=10,
+        )
+        monitor.end_run(run_id)
+
+    baseline = monitor.get_baseline()
+    assert baseline is not None
+    assert baseline.is_calibrated
+
+    run_id = monitor.start_run(run_id="spike")
+    events = monitor.record_event(
+        "llm_request",
+        "spike",
+        run_id=run_id,
+        token_count=200,
+        duration_ms=10,
+    )
+    monitor.end_run(run_id)
+    monitor.close()
+
+    assert any(event.detector == DetectorType.RESOURCE_SPIKE for event in events)
+
+
+def test_resource_normal_run_stays_below_calibrated_threshold(tmp_path):
+    monitor = DriftMonitor(
+        agent_id="resource-normal",
+        db_path=str(tmp_path / "resource-normal.db"),
+        calibration_runs=3,
+    )
+
+    for index in range(3):
+        run_id = monitor.start_run(run_id=f"normal-{index}")
+        monitor.record_event(
+            "llm_request",
+            "normal",
+            run_id=run_id,
+            token_count=100,
+            duration_ms=10,
+        )
+        monitor.end_run(run_id)
+
+    run_id = monitor.start_run(run_id="normal-followup")
+    events = monitor.record_event(
+        "llm_request",
+        "normal",
+        run_id=run_id,
+        token_count=120,
+        duration_ms=10,
+    )
+    monitor.end_run(run_id)
+    monitor.close()
+
+    assert not any(event.detector == DetectorType.RESOURCE_SPIKE for event in events)
+
+
 def test_absolute_resource_limit(tmp_path):
     monitor = DriftMonitor(
         agent_id="resource-limit",
