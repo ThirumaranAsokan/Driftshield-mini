@@ -1,6 +1,7 @@
 name: Temporary Nebius analysis
 
 on:
+  push:
   pull_request:
 
 jobs:
