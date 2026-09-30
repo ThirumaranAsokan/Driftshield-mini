@@ -63,3 +63,23 @@ def test_extract_signals_accepts_content_field_and_assistant_role():
     assert signals.action_names == (
         "apply_patch: cd //repo && git apply patch.diff --allow-empty",
     )
+
+
+def test_extract_signals_finds_actions_in_observation_role():
+    row = {
+        "target": False,
+        "trajectory": [
+            {
+                "role": "user",
+                "text": (
+                    "Will execute following command for apply_patch: ```"
+                    "cd //repo && git apply patch.diff --allow-empty"
+                    "```"
+                ),
+            }
+        ],
+    }
+    signals = extract_signals(row)
+    assert signals.action_names == (
+        "apply_patch: cd //repo && git apply patch.diff --allow-empty",
+    )
