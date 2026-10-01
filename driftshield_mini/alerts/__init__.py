@@ -35,7 +35,7 @@ class AlertDispatcher:
     def __init__(
         self,
         webhook_url: str | None = None,
-        min_severity: str = "MEDIUM",
+        min_severity: str = "MED",
         cooldown_seconds: float = 60.0,
     ):
         self.webhook_url = webhook_url

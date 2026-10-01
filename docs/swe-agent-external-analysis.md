@@ -8,7 +8,7 @@ The dataset contains 80,036 SWE-agent trajectories and provides a target field f
 
 Install the optional dependency:
 
-    pip install -e external-validation
+    python -m pip install -e ".[external-validation]"
 
 Then run a 1,000-row streaming sample:
 
