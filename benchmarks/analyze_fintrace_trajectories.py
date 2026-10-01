@@ -188,6 +188,8 @@ def analyse_rows(
             "Resource signals use estimated trajectory text/tool-argument tokens, "
             "not provider usage telemetry."
         ),
+
+
 def load_rows() -> Iterable[dict[str, Any]]:
     try:
         from datasets import load_dataset
@@ -199,6 +201,8 @@ def load_rows() -> Iterable[dict[str, Any]]:
 
     dataset = load_dataset("YupengCao/FinTrace", split="test")
     return (dict(row) for row in dataset)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=None)
