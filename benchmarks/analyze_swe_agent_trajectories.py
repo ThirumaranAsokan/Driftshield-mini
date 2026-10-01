@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+SPECIAL_COMMANDS = {"edit", "goto", "open", "scroll_down", "search_dir", "submit"}
+
 TOOL_NAMES = {
     "apply_patch", "bash", "cat", "cd", "edit", "find", "git", "grep",
     "goto", "ls", "mkdir", "open", "python", "pytest", "rg", "scroll_down",
