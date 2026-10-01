@@ -193,13 +193,12 @@ def load_rows() -> Iterable[dict[str, Any]]:
         from datasets import load_dataset
     except ImportError as exc:
         raise SystemExit(
-            "Install the external validation extra first: "\n            'python -m pip install -e ".[external-validation]"'
-        raise SystemExit(
             "Install the external validation extra first: "
             'python -m pip install -e ".[external-validation]"'
+        ) from exc
+
+    dataset = load_dataset("YupengCao/FinTrace", split="test")
     return (dict(row) for row in dataset)
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=None)
