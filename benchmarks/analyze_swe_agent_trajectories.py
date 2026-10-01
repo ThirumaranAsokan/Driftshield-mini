@@ -84,7 +84,7 @@ def extract_actions(text: str) -> list[str]:
     # SWE-agent also emits interface commands in fenced blocks.
     # Keep these separate from marker-based tool parsing to avoid
     # double-counting apply_patch commands.
-    for block in text.split("`".repeat(3))[1::2]:
+    for block in text.split("```")[1::2]:
         command = block.strip()
         first_line = command.splitlines()[0].strip() if command else ""
         first_token = first_line.split()[0].lower() if first_line else ""
