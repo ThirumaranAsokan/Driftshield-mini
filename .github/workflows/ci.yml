@@ -13,40 +13,31 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
       - name: Install
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-
       - name: Lint
         run: ruff check .
-
       - name: Test
         run: pytest -q --cov=driftshield_mini/alerts --cov=driftshield_mini/baseline --cov=driftshield_mini/detectors --cov=driftshield_mini/embeddings.py --cov=driftshield_mini/export.py --cov=driftshield_mini/google_adk.py --cov=driftshield_mini/models.py --cov=driftshield_mini/monitor.py --cov=driftshield_mini/storage --cov-report=term-missing --cov-fail-under=75
-
 
   benchmark:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: Install
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-
       - name: Run labelled benchmark
         run: python benchmarks/run_benchmark.py
-
 
   baseline-robustness:
     runs-on: ubuntu-latest
@@ -62,7 +53,6 @@ jobs:
       - name: Run baseline robustness diagnostic
         run: python benchmarks/baseline_robustness.py
 
-
   external-nebius-analysis:
     runs-on: ubuntu-latest
     steps:
@@ -74,3 +64,30 @@ jobs:
         run: python -m pip install -e ".[external-validation]"
       - name: Analyze 1000 Nebius trajectories
         run: python benchmarks/analyze_swe_agent_trajectories.py --limit 1000
+      - name: Diagnose unparsed trajectories
+        run: |
+          python - <<'PY'
+          import json
+          from datasets import load_dataset
+          from benchmarks.analyze_swe_agent_trajectories import extract_signals
+          ds = load_dataset("nebius/SWE-agent-trajectories", split="train", streaming=True)
+          missing = 0
+          for row in ds:
+              s = extract_signals(row)
+              if not s.action_names:
+                  missing += 1
+                  print("MISSING", missing, "INSTANCE", row.get("instance_id"), "TARGET", row.get("target"), "EXIT", row.get("exit_status"))
+                  traj = row.get("trajectory", [])
+                  if isinstance(traj, str):
+                      traj = json.loads(traj)
+                  for item in traj:
+                      text = str(item.get("text") or item.get("content") or "")
+                      if text.strip():
+                          print("ROLE", item.get("role"), "TEXT", repr(text[:1200]))
+                  print("EVAL", repr(str(row.get("eval_logs", ""))[:1200]))
+                  if missing >= 5:
+                      break
+              if missing and missing >= 5:
+                  break
+          print("TOTAL_MISSING_FIRST_1000_OR_UNTIL_5", missing)
+          PY
