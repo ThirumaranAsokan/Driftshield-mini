@@ -9,8 +9,9 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from driftshield_mini import DriftMonitor
 from driftshield_mini.models import DetectorType
