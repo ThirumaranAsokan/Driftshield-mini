@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Any
 
 TOOL_NAMES = {
-    "apply_patch", "bash", "cat", "cd", "find", "git", "grep", "ls",
-    "mkdir", "python", "pytest", "rg", "sed", "tail", "touch", "vim",
+    "apply_patch", "bash", "cat", "cd", "edit", "find", "git", "grep",
+    "goto", "ls", "mkdir", "open", "python", "pytest", "rg", "scroll_down",
+    "search_dir", "sed", "submit", "tail", "touch", "vim",
 }
 
 
