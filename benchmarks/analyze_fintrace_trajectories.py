@@ -184,10 +184,14 @@ def analyse_rows(
         "signals": dict(totals),
         "results": results,
         "accuracy_metrics": "not computed: FinTrace does not provide DriftShield detector labels",
+        "golden_trajectory_note": (
+            "golden_trajectories are evaluation material, not DriftShield detector labels"
+        ),
         "resource_note": (
             "Resource signals use estimated trajectory text/tool-argument tokens, "
             "not provider usage telemetry."
         ),
+    }
 
 
 def load_rows() -> Iterable[dict[str, Any]]:
