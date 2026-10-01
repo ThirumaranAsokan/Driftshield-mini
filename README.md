@@ -1,6 +1,6 @@
 # DriftShield Mini
 
-Privacy-first, local-first behavioural monitoring for AI agents.
+Behaviour monitoring for AI agents.
 
 DriftShield Mini is an **in-process monitoring library** for agentic applications. It records observable agent behaviour locally and looks for three signal families:
 
@@ -217,7 +217,7 @@ monitor = DriftMonitor(
 
 SQLite uses WAL mode and thread-local connections.
 
-Traces can contain agent inputs, outputs, tool names, and metadata. Local storage does not automatically make sensitive data safe. Apply appropriate retention, access-control, and redaction policies.
+Traces can contain agent inputs, outputs, tool names, and metadata. Keeping the database local does not automatically make sensitive data safe. Apply appropriate retention, access-control, and redaction policies.
 
 ## Offline / air-gapped operation
 
@@ -372,7 +372,7 @@ The generated `dist/` artifacts are release candidates only; publishing is a sep
 
 ## Privacy and regulated environments
 
-DriftShield is designed around local-first monitoring and can be useful where sending full agent traces to an external observability service is undesirable.
+DriftShield keeps monitoring data on the machine by default. That can be useful when an application should not send full agent traces to an external monitoring service, but local storage does not remove the need for data controls.
 
 For sensitive or regulated workloads:
 
@@ -389,7 +389,7 @@ DriftShield itself does not make a deployment compliant with a specific regulati
 
 AI agents can fail in ways that ordinary request/response monitoring does not capture: repeated tool loops, semantic task deviation, and unexpectedly expensive execution.
 
-DriftShield Mini is intended to provide a small, local monitoring layer that can sit beside an existing agent without requiring a separate observability service.
+I built DriftShield Mini as a small monitoring layer that can run beside an existing agent without requiring a separate observability service.
 
 ## License
 
