@@ -61,3 +61,28 @@ jobs:
           pip install -e ".[dev]"
       - name: Run baseline robustness diagnostic
         run: python benchmarks/baseline_robustness.py
+
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build release artifacts
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+
+      - name: Install wheel smoke test
+        run: |
+          python -m venv /tmp/driftshield-package-test
+          /tmp/driftshield-package-test/bin/python -m pip install --upgrade pip
+          /tmp/driftshield-package-test/bin/pip install --no-deps dist/*.whl
+          /tmp/driftshield-package-test/bin/python -c "import driftshield_mini; from driftshield_mini import DriftMonitor; print(driftshield_mini.__version__)"
+          /tmp/driftshield-package-test/bin/driftshield --help
