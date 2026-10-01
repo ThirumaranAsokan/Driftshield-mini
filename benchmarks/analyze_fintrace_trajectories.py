@@ -184,7 +184,7 @@ def analyse_rows(
         "signals": dict(totals),
         "results": results,
         "accuracy_metrics": "not computed: FinTrace does not provide DriftShield detector labels",
-        "resource_note": "Resource signals use estimated trajectory text/tool-argument tokens, not provider usage telemetry.",
+        "resource_note": (\n            "Resource signals use estimated trajectory text/tool-argument tokens, " +\n            "not provider usage telemetry."\n        ),
         "golden_trajectory_note": "golden_trajectories are not used as detector ground truth.",
     }
 
@@ -194,7 +194,7 @@ def load_rows() -> Iterable[dict[str, Any]]:
         from datasets import load_dataset
     except ImportError as exc:
         raise SystemExit(
-            'Install the external validation extra first: python -m pip install -e ".[external-validation]"'
+            "Install the external validation extra first: "\n            'python -m pip install -e ".[external-validation]"'
         ) from exc
 
     dataset = load_dataset("YupengCao/FinTrace", split="test")
