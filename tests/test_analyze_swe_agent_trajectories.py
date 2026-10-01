@@ -99,3 +99,12 @@ def test_extract_signals_finds_actions_in_eval_logs():
     assert signals.action_names == (
         "apply_patch: cd //repo && git apply patch.diff --allow-empty",
     )
+
+
+def test_extract_actions_from_swe_agent_interface_command():
+    text = """Let's inspect the file.
+
+```
+open azure_functions_worker/dispatcher.py
+```"""
+    assert extract_actions(text) == ["open azure_functions_worker/dispatcher.py"]
