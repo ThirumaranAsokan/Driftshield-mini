@@ -83,6 +83,6 @@ jobs:
         run: |
           python -m venv /tmp/driftshield-package-test
           /tmp/driftshield-package-test/bin/python -m pip install --upgrade pip
-          /tmp/driftshield-package-test/bin/pip install --no-deps dist/*.whl
+          /tmp/driftshield-package-test/bin/pip install dist/*.whl
           /tmp/driftshield-package-test/bin/python -c "import driftshield_mini; from driftshield_mini import DriftMonitor; print(driftshield_mini.__version__)"
           /tmp/driftshield-package-test/bin/driftshield --help
