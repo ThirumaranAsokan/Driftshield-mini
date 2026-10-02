@@ -115,4 +115,4 @@ def test_fintrace_turn_output_schema_is_normalised():
     assert result["tool_actions"] == 4
     assert result["trajectory_messages"] == 4
     assert result["signals"]["action_loop"] == 1
-\n
+
