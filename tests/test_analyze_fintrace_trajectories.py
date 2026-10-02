@@ -45,3 +45,74 @@ def test_fintrace_adapter_extracts_tool_calls_and_output():
     assert report["results"][0]["trajectory_messages"] == 4
     assert report["accuracy_metrics"].startswith("not computed")
     assert report["golden_trajectory_note"].startswith("golden_trajectories")
+
+def test_fintrace_turn_output_schema_is_normalised():
+    rows = [
+        {
+            "id": "fintrace-1",
+            "source_query": "Repeat a financial lookup.",
+            "task_type": "Financial QA",
+            "output_trajectory": [
+                {
+                    "turn": 0,
+                    "reasoning": "Observed FinTrace turn structure.",
+                    "endpoints_called": ["income-statement"],
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call-1",
+                            "name": "income-statement",
+                            "arguments": '{"symbol":"AAPL"}',
+                        }
+                    ],
+                },
+                {
+                    "turn": 1,
+                    "reasoning": "Repeat.",
+                    "endpoints_called": ["income-statement"],
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call-2",
+                            "name": "income-statement",
+                            "arguments": '{"symbol":"AAPL"}',
+                        }
+                    ],
+                },
+                {
+                    "turn": 2,
+                    "reasoning": "Repeat.",
+                    "endpoints_called": ["income-statement"],
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call-3",
+                            "name": "income-statement",
+                            "arguments": '{"symbol":"AAPL"}',
+                        }
+                    ],
+                },
+                {
+                    "turn": 3,
+                    "reasoning": "Repeat.",
+                    "endpoints_called": ["income-statement"],
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call-4",
+                            "name": "income-statement",
+                            "arguments": '{"symbol":"AAPL"}',
+                        }
+                    ],
+                },
+            ],
+        }
+    ]
+
+    report = analyse_rows(rows, limit=1)
+
+    result = report["results"][0]
+    assert result["tool_actions"] == 4
+    assert result["trajectory_messages"] == 4
+    assert result["signals"]["action_loop"] == 1
+\n
