@@ -68,16 +68,57 @@ def iter_rows(payload: Any) -> Iterable[dict[str, Any]]:
             yield from (row for row in rows if isinstance(row, dict))
 
 
+def _normalise_trajectory(trajectory: Any) -> list[dict[str, Any]]:
+    """Convert native messages or FinTrace turn/output records to monitor messages."""
+    if isinstance(trajectory, str):
+        trajectory = json.loads(trajectory)
+    if not isinstance(trajectory, list):
+        return []
+
+    # FinTrace stores each turn as {turn, reasoning, output, endpoints_called}.
+    # Its output contains function_call/function_call_output/message records.
+    if any(
+        isinstance(item, dict) and "output" in item and "role" not in item
+        for item in trajectory
+    ):
+        messages: list[dict[str, Any]] = []
+        for turn in trajectory:
+            if not isinstance(turn, dict) or not isinstance(turn.get("output"), list):
+                continue
+            for item in turn["output"]:
+                if not isinstance(item, dict):
+                    continue
+                item_type = item.get("type")
+                if item_type == "function_call":
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "id": item.get("call_id"),
+                                    "type": "function",
+                                    "function": {
+                                        "name": item.get("name"),
+                                        "arguments": item.get("arguments", ""),
+                                    },
+                                }
+                            ],
+                        }
+                    )
+                elif item_type == "message":
+                    messages.append(item)
+        return messages
+
+    return [item for item in trajectory if isinstance(item, dict)]
+
+
 def analyse_row(
     row: dict[str, Any],
     loop_repeats: int,
     token_limit: int,
 ) -> dict[str, Any]:
-    trajectory = row.get("output_trajectory", [])
-    if isinstance(trajectory, str):
-        trajectory = json.loads(trajectory)
-    if not isinstance(trajectory, list):
-        trajectory = []
+    trajectory = _normalise_trajectory(row.get("output_trajectory", []))
 
     goal = str(row.get("source_query", ""))
     monitor = DriftMonitor(
