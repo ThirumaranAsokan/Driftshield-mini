@@ -34,6 +34,22 @@ The adapter reads output_trajectory messages and records:
 
 The existing DriftShield detectors are used without changing their core behaviour.
 
+## Verified CI result
+
+GitHub Actions FinTrace validation run #3 completed successfully on commit c7d1a47750f5421a857970800027f499efb38b95.
+
+The generated report covered all 800 FinTrace records and contained:
+
+- 7,960 tool actions
+- 9,469 normalized trajectory messages
+- 684,915 estimated trajectory tokens
+- 360 records with a goal_drift signal
+- 306 records with an action_loop signal
+- 0 records above the 50,000-token resource threshold
+- 32 distinct task types
+
+These are detector observations from the adapter run, not independently labelled correctness measurements.
+
 ## What the results mean
 
 The report can show how often DriftShield emits signals while processing the external financial trajectories.
