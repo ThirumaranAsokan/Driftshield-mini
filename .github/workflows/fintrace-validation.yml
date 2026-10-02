@@ -30,11 +30,15 @@ jobs:
           git fetch origin main
           git checkout origin/main -- FinTrace_testset.json.gz
           test -s FinTrace_testset.json.gz
+          gzip -t FinTrace_testset.json.gz
 
       - name: Run FinTrace trajectory analysis
         run: |
           mkdir -p validation-results
-          python benchmarks/analyze_fintrace_trajectories.py             --input FinTrace_testset.json.gz             --output validation-results/fintrace-analysis.json
+          gzip -cd FinTrace_testset.json.gz > FinTrace_testset.json
+          python benchmarks/analyze_fintrace_trajectories.py \
+            --input FinTrace_testset.json \
+            --output validation-results/fintrace-analysis.json
 
       - name: Upload FinTrace analysis
         uses: actions/upload-artifact@v4
