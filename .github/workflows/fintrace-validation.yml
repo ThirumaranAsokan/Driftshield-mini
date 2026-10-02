@@ -1,0 +1,48 @@
+name: FinTrace validation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fintrace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install DriftShield and validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[external-validation]"
+
+      - name: Restore FinTrace test set from main
+        run: |
+          git fetch origin main
+          git checkout origin/main -- FinTrace_testset.json.gz
+          test -s FinTrace_testset.json.gz
+          gzip -t FinTrace_testset.json.gz
+
+      - name: Run FinTrace trajectory analysis
+        run: |
+          mkdir -p validation-results
+          gzip -cd FinTrace_testset.json.gz > FinTrace_testset.json
+          python benchmarks/analyze_fintrace_trajectories.py \
+            --input FinTrace_testset.json \
+            --output validation-results/fintrace-analysis.json
+
+      - name: Upload FinTrace analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: fintrace-analysis
+          path: validation-results/fintrace-analysis.json
+          if-no-files-found: error

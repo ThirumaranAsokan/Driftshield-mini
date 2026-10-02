@@ -347,6 +347,32 @@ Those signals are **exploratory behavioural evidence only**. The dataset's targe
 
 See [docs/swe-agent-external-analysis.md](docs/swe-agent-external-analysis.md).
 
+## FinTrace external trajectory validation
+
+A dedicated external-analysis path now covers the public **FinTrace** financial-agent trajectory set.
+
+The repository now includes:
+
+- `benchmarks/analyze_fintrace_trajectories.py` for normalising FinTrace's nested trajectory schema into DriftShield monitoring events.
+- A regression test covering the nested `turn/output/function_call/message` structure.
+- `.github/workflows/fintrace-validation.yml` to run the analysis in CI and retain the result as a workflow artifact.
+- [docs/fintrace-external-analysis.md](docs/fintrace-external-analysis.md) documenting the method, evidence, and limitations.
+
+The verified CI analysis ran all **800** FinTrace records and observed:
+
+- **7,960** tool actions
+- **9,469** normalized trajectory messages
+- **684,915** estimated trajectory tokens
+- **360** rows with a goal-drift signal
+- **306** rows with an action-loop signal
+- **0** rows above the 50,000 estimated-token resource threshold
+- **32** task types
+
+These are behavioural detector observations, not independent accuracy measurements. FinTrace does not provide independent DriftShield detector labels, so the repository does **not** claim FinTrace precision, recall, F1, FPR, TP, FP, FN, or TN from this analysis. The dataset's `golden_trajectories` are reference/evaluation material, not DriftShield detector labels, and the resource estimate is based on trajectory text/tool arguments rather than provider usage telemetry.
+
+The next validation step is an independently labelled review subset, with calibration and holdout traces kept separate. The package is **not being published to PyPI yet**; release/package work remains pending until the validation work is complete.
+
+
 ## Development
 
 Run the tests:

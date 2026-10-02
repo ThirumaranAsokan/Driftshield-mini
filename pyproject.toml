@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "driftshield-mini"
 version = "0.2.2"
-description = "Privacy-first, zero-infrastructure drift detection for AI agents — LangChain, CrewAI, AutoGen, LlamaIndex, OpenAI Assistants, Semantic Kernel, Haystack, Google ADK"
+description = "Behaviour monitoring for AI agents — LangChain, CrewAI, AutoGen, LlamaIndex, OpenAI, Semantic Kernel, Haystack, Google ADK"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
