@@ -137,6 +137,22 @@ def extract_signals(row: dict[str, Any]) -> TrajectorySignals:
     )
 
 
+def _rates(tp: int, fp: int, fn: int, tn: int) -> dict[str, float]:
+    return {
+        "precision": round(tp / (tp + fp), 6) if tp + fp else 0.0,
+        "recall": round(tp / (tp + fn), 6) if tp + fn else 0.0,
+        "f1": round(2 * tp / (2 * tp + fp + fn), 6) if 2 * tp + fp + fn else 0.0,
+        "fpr": round(fp / (fp + tn), 6) if fp + tn else 0.0,
+    }
+
+
+def _failure_confusion(rows: list[tuple[bool, bool]]) -> dict[str, Any]:
+    tp = sum(pred and not solved for pred, solved in rows)
+    fp = sum(pred and solved for pred, solved in rows)
+    fn = sum((not pred) and (not solved) for pred, solved in rows)
+    tn = sum((not pred) and solved for pred, solved in rows)
+    return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, **_rates(tp, fp, fn, tn)}
+
 def analyse_rows(
     rows: Iterable[dict[str, Any]],
     loop_repeats: int = 4,
@@ -146,12 +162,17 @@ def analyse_rows(
     counts = Counter()
     total = 0
     extracted = 0
+    loop_pairs: list[tuple[bool, bool]] = []
+    resource_pairs: list[tuple[bool, bool]] = []
     for row in rows:
         total += 1
-        group = "target_true" if bool(row.get("target", False)) else "target_false"
+        solved = bool(row.get("target", False))
+        group = "target_true" if solved else "target_false"
         signals = extract_signals(row)
         loop = signals.max_consecutive_action >= loop_repeats
         resource = signals.token_estimate > token_limit
+        loop_pairs.append((loop, solved))
+        resource_pairs.append((resource, solved))
         groups[group]["trajectories"] += 1
         groups[group]["loop_signal"] += int(loop)
         groups[group]["resource_signal"] += int(resource)
@@ -166,7 +187,13 @@ def analyse_rows(
         "action_extraction_rate": round(extracted / total, 4) if total else 0.0,
         "overall": dict(counts),
         "by_target": {key: dict(value) for key, value in groups.items()},
-        "accuracy_metrics": "not computed: dataset has no DriftShield detector labels",
+        "swe_failure_association": {
+            "definition": "positive means target=False (SWE issue not solved); detector signal is treated only as an outcome association proxy",
+            "action_loop": _failure_confusion(loop_pairs),
+            "resource_spike": _failure_confusion(resource_pairs),
+            "goal_drift": None,
+        },
+        "accuracy_metrics": "NOT DriftShield accuracy: SWE target is task outcome, not detector ground truth",
     }
 
 
