@@ -1,20 +1,22 @@
-"""Build a blinded human-review set from nebius/SWE-agent-trajectories.
+"""Build a deterministic blinded review set from nebius/SWE-agent-trajectories.
 
 This script NEVER derives DriftShield labels from the dataset's target/exit_status.
 Those fields are retained only in a private manifest for later audit and are omitted
 from the reviewer file. Reviewers label action_loop, goal_drift, and resource_spike
 independently of DriftShield output.
 
+The sample uses deterministic reservoir sampling over the full streaming training
+split so the review set is not biased toward the first repositories/tasks.
+
 Usage:
   python benchmarks/build_gold_review_set.py --limit 300 --output validation/gold_review.json
-
-The resulting reviewer file is intentionally incomplete until human labels are supplied.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import random
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +29,7 @@ def stable_id(row: dict[str, Any]) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
-def load_rows(limit: int) -> list[dict[str, Any]]:
+def load_rows(limit: int, seed: int) -> list[dict[str, Any]]:
     try:
         from datasets import load_dataset
     except ImportError as exc:
@@ -35,26 +37,38 @@ def load_rows(limit: int) -> list[dict[str, Any]]:
             'Install external validation first: python -m pip install -e ".[external-validation]"'
         ) from exc
 
+    if limit <= 0:
+        raise ValueError("limit must be positive")
+
     dataset = load_dataset(
         "nebius/SWE-agent-trajectories",
         split="train",
         streaming=True,
     )
-    rows: list[dict[str, Any]] = []
-    for row in dataset:
-        rows.append(dict(row))
-        if len(rows) >= limit:
-            break
-    return rows
+    rng = random.Random(seed)
+    reservoir: list[dict[str, Any]] = []
+
+    for index, row in enumerate(dataset):
+        item = dict(row)
+        if index < limit:
+            reservoir.append(item)
+            continue
+
+        slot = rng.randrange(index + 1)
+        if slot < limit:
+            reservoir[slot] = item
+
+    return reservoir
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=300)
+    parser.add_argument("--seed", type=int, default=20261005)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
-    rows = load_rows(args.limit)
+    rows = load_rows(args.limit, args.seed)
     reviewer_rows = []
     private_manifest = []
 
@@ -103,6 +117,11 @@ def main() -> None:
                 "dataset": "nebius/SWE-agent-trajectories",
                 "purpose": "independent DriftShield detector labelling",
                 "label_status": "unlabelled",
+                "sampling": {
+                    "method": "deterministic reservoir sampling over full train split",
+                    "seed": args.seed,
+                    "sample_size": len(reviewer_rows),
+                },
                 "reviewer_instructions": "See docs/gold-validation.md",
                 "runs": reviewer_rows,
             },
