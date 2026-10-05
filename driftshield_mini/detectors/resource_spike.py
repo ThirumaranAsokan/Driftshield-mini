@@ -36,7 +36,7 @@ class ResourceSpikeDetector(BaseDetector):
         self.absolute_token_limit = absolute_token_limit
         self.absolute_duration_limit_ms = absolute_duration_limit_ms
 
-        # Running counters per run (reset on new run)
+        # Running counters per active run. DriftMonitor releases them in end_run().
         self._run_counters: dict[str, dict] = {}
         self._counter_lock = threading.RLock()
 
@@ -52,15 +52,12 @@ class ResourceSpikeDetector(BaseDetector):
                 "llm_calls": 0,
                 "start_time": time.time(),
             }
-            # Cleanup old counters (keep the 10 most recently started runs).
-            # Run IDs are opaque values, so lexical ordering is not a valid age check.
-            while len(self._run_counters) > 10:
-                oldest = min(
-                    self._run_counters,
-                    key=lambda run_id: self._run_counters[run_id]["start_time"],
-                )
-                del self._run_counters[oldest]
         return self._run_counters[run_id]
+
+    def on_run_end(self, run_id: str) -> None:
+        """Release counters for a completed run without evicting active runs."""
+        with self._counter_lock:
+            self._run_counters.pop(run_id, None)
 
     def check(
         self,
