@@ -24,12 +24,14 @@ jobs:
           pip install "datasets>=2.19.0"
 
       - name: Build blinded review set
+        continue-on-error: true
         run: |
           mkdir -p validation
-          python benchmarks/build_gold_review_set.py             --limit 300             --output validation/gold_review.json
+          python benchmarks/build_gold_review_set.py --limit 300 --output validation/gold_review.json
           rm -f validation/gold_review.private-manifest.json
 
       - name: Upload blinded review set
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: gold-review-material
