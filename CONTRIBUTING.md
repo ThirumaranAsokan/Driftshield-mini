@@ -157,7 +157,48 @@ The monitor is designed to be used from applications that may handle multiple ru
 
 When adding a new dataset or validation script, run the normal test and Ruff checks before opening the PR. Dataset-specific code must not bypass the same quality gates used by the core package.
 
-## Code style
+
+## Project direction
+
+DriftShield is being developed as a practical monitoring and validation project for AI-agent applications. The immediate goal is to establish reliable detector behaviour and evidence before making stronger release or accuracy claims.
+
+The current priorities are:
+
+1. establish independently reviewed detector labels on representative agent traces
+2. validate the detectors on finance and other realistic workloads without treating task outcomes as detector truth
+3. strengthen integration lifecycle coverage, including concurrent and long-running runs
+4. measure false positives, false negatives, latency, CPU, memory, and storage overhead
+5. improve examples and integration documentation so other developers can reproduce results
+6. keep package publication separate until the validation evidence is strong enough to support a release
+
+Contributors are welcome to challenge assumptions and report negative results. A failed experiment or detector miss is useful evidence and should be documented rather than hidden.
+
+## Maintainer review record
+
+The current code review of this project has been carried out by **Thirumaran Asokan**, including review of detector state handling, concurrent-run behaviour, regression coverage, validation workflows, package build/install checks, integration checks, and the distinction between benchmark results and independently established detector labels.
+
+This review record is not a substitute for independent external review. Contributors should still review changes critically and raise issues when implementation or validation evidence is incomplete.
+
+## How to take ownership of a piece of the project
+
+If you want to take the project further, choose one focused area and open an issue or pull request describing the intended result. Useful ownership areas include:
+
+- **Detector engineering:** improve one detector while preserving explicit regression tests and documenting threshold/semantic changes.
+- **Validation:** independently label trajectories, adjudicate disagreements, and publish reproducible evaluation methodology.
+- **Finance validation:** test against realistic financial-agent traces and document what can and cannot be inferred from those traces.
+- **Framework integrations:** test complete start/record/end lifecycles against supported agent frameworks, including concurrent runs.
+- **Performance:** benchmark overhead on representative workloads and identify regressions before they reach release candidates.
+- **Data quality:** add new datasets only with clear provenance, licensing, extraction rules, and a reproducible validation command.
+- **Documentation:** improve examples, setup instructions, detector explanations, and reproducibility notes.
+
+For any new validation dataset, keep three things separate: the source dataset's own outcome/reference labels, DriftShield's detector output, and any independently reviewed human labels. Do not silently convert one into another.
+
+## A good first contribution
+
+A first contribution does not need to be large. A well-reproduced detector miss, a false-positive example with a regression test, an integration lifecycle test, or a carefully documented validation result is valuable.
+
+Before starting a large refactor, open an issue so the scope and expected evidence can be agreed first. This helps keep the project understandable as more contributors join.
+\n## Code style
 
 - Python 3.10+
 - Ruff for linting
