@@ -373,6 +373,47 @@ These are behavioural detector observations, not independent accuracy measuremen
 The next validation step is an independently labelled review subset, with calibration and holdout traces kept separate. The package is **not being published to PyPI yet**; release/package work remains pending until the validation work is complete.
 
 
+## Validation status and what is next
+
+The project now has a validation pipeline that is intentionally separated into three levels:
+
+1. **Deterministic synthetic tests** for regression coverage. These report TP/FP/FN/TN, precision, recall, F1, false-positive rate, and detection latency for controlled labelled cases.
+2. **External trajectory analysis** using public SWE-agent, FinTrace, and tau2-bench material. These runs exercise the detectors against real agent trajectories and are useful for behavioural evidence, parser coverage, and failure-mode discovery. They do **not** provide independent DriftShield detector labels, so their outcome associations are not product accuracy metrics.
+3. **Independent labelled validation**, which is the remaining step before making real-world detector accuracy claims. The repository contains the tooling to build a deterministic 300-trajectory review set from the public `nebius/SWE-agent-trajectories` dataset, split into 200 calibration records and 100 holdout records.
+
+### What has been verified
+
+The repository CI currently checks:
+
+- Python 3.10, 3.11, and 3.12
+- Ruff and the test suite
+- package build and wheel smoke testing
+- eight framework integration paths: CrewAI, OpenAI, Semantic Kernel, LlamaIndex, AutoGen, LangChain, Google ADK, and Haystack
+- FinTrace parsing and analysis across all 800 records
+- SWE-agent external trajectory analysis
+- published tau2-bench trajectory analysis
+- deterministic gold-review-set generation and validation tooling
+
+The latest merged validation work is PR [#16](https://github.com/ThirumaranAsokan/Driftshield-mini/pull/16), merged on 2026-10-05. The merge commit is `c7156e819d4d50a6d3be044707d31bd0ae0d074e`.
+
+### What contributors can help with next
+
+The most useful work now is **independent review of representative agent trajectories**.
+
+For the gold-validation process:
+
+1. Build the 300-record review set with `benchmarks/build_gold_review_set.py`.
+2. Review `action_loop`, `goal_drift`, and `resource_spike` independently of DriftShield's predictions.
+3. Record a short reason and confidence for every label.
+4. Keep the 200 calibration records separate from the 100 holdout records.
+5. Ideally have two reviewers label the holdout and adjudicate disagreements before looking at detector results.
+6. Convert the frozen labels with `benchmarks/convert_gold_review.py`.
+7. Run `benchmarks/validate_trace_dataset.py` and report the resulting confusion matrices and metrics.
+
+Do not use SWE-bench success/failure, FinTrace golden trajectories, or DriftShield's own predictions as substitutes for detector ground truth.
+
+See [docs/gold-validation.md](docs/gold-validation.md) and [CONTRIBUTING.md](CONTRIBUTING.md) for the review workflow.
+
 ## Development
 
 Run the tests:
