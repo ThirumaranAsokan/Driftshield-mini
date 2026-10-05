@@ -100,3 +100,50 @@ The validator reports, separately for all three detector families:
 ## Important limitation
 
 The public SWE-agent dataset gives a task-success target, but that target is not the ground truth for any DriftShield detector. Independent human review is therefore still required before any precision/recall/F1/FPR claim is made.
+
+
+# External validation datasets
+
+## tau2-bench
+
+This repository now validates against published tau2-bench result files from the upstream sierra-research/tau2-bench repository.
+
+The CI workflow downloads three published GPT-4.1 result files covering the airline, retail, and telecom domains. The upstream files contain task definitions, complete simulation messages, tool calls, rewards, termination reasons, and agent-cost fields where available.
+
+The analysis is intentionally an external behavioural validation, not detector ground truth.
+
+### Action-loop association
+
+The current external proxy is deliberately simple and auditable:
+
+- extract actual assistant tool_calls from the stored simulation messages;
+- flag a loop signal when the same tool name occurs four or more times consecutively;
+- compare that signal with the upstream benchmark outcome (reward < 1.0).
+
+This does not mean reward < 1.0 is an action_loop label. It measures association between an observable trajectory pattern and benchmark failure.
+
+### Resource association
+
+Where upstream simulations expose agent_cost, the analysis computes a P99 cost threshold within the downloaded corpus and measures its association with benchmark failure.
+
+Where message-level provider usage is present, the analysis also computes a P99 provider-token threshold and reports the same association.
+
+These are stronger than the SWE-agent text-length estimate when telemetry exists, but they are still not resource_spike ground truth.
+
+### Goal drift
+
+No independent goal_drift label is supplied by tau2-bench. The benchmark task reward, termination reason, or agent-error review must not be relabelled as goal drift. The analysis therefore records goal_drift as not directly evaluable.
+
+### Reproducibility
+
+Run locally after downloading the upstream files:
+
+    python benchmarks/analyze_tau2_bench.py external-data/tau2-bench/*.json --output validation-results/tau2-bench-analysis.json
+
+CI performs the download and analysis automatically and uploads the JSON result as the tau2-bench-analysis artifact.
+
+## Accuracy claims
+
+Only the independent gold-labelled dataset is eligible for product-level TP/FP/FN/TN, precision, recall, F1, and FPR claims.
+
+SWE-agent and tau2-bench results remain explicitly labelled as external outcome associations.
