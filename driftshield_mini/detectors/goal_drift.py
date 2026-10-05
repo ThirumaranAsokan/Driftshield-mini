@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 
 import numpy as np
 
@@ -49,23 +50,27 @@ class GoalDriftDetector(BaseDetector):
         self.goal_description = goal_description
         self.similarity_threshold = similarity_threshold
         self._goal_embedding: np.ndarray | None = None
+        self._goal_embeddings: dict[str, np.ndarray] = {}
+        self._embedding_lock = threading.RLock()
 
     def name(self) -> str:
         return "goal_drift"
 
     def set_goal(self, goal_description: str) -> None:
-        """Set or update the goal description and precompute its embedding."""
+        """Set the default goal used when an event has no per-run goal."""
         self.goal_description = goal_description
-        self._goal_embedding = None  # Reset so it's recomputed on next check
+        self._goal_embedding = None
 
-    def _get_goal_embedding(self) -> np.ndarray:
-        """Get or compute the goal embedding."""
-        if self._goal_embedding is None:
-            if not self.goal_description:
-                raise ValueError("Goal description not set. Call set_goal() first.")
-            embedder = load_embedding_model()
-            self._goal_embedding = embedder.encode(self.goal_description)
-        return self._goal_embedding
+    def _get_goal_embedding(self, goal_description: str | None = None) -> np.ndarray:
+        """Get or compute an embedding for a specific goal safely across runs."""
+        goal = goal_description if goal_description is not None else self.goal_description
+        if not goal:
+            raise ValueError("Goal description not set. Call set_goal() first.")
+        with self._embedding_lock:
+            if goal not in self._goal_embeddings:
+                embedder = load_embedding_model()
+                self._goal_embeddings[goal] = embedder.encode(goal)
+            return self._goal_embeddings[goal]
 
     def check(
         self,
@@ -83,12 +88,13 @@ class GoalDriftDetector(BaseDetector):
         if not output_text or len(output_text.strip()) < 20:
             return None
 
-        if not self.goal_description:
+        goal_description = event.metadata.get("goal_description") or self.goal_description
+        if not goal_description:
             return None
 
         try:
             embedder = load_embedding_model()
-            goal_emb = self._get_goal_embedding()
+            goal_emb = self._get_goal_embedding(goal_description)
             output_emb = embedder.encode(output_text[:512])  # Truncate for efficiency
 
             similarity = cosine_similarity(goal_emb, output_emb)
@@ -121,7 +127,7 @@ class GoalDriftDetector(BaseDetector):
                         "similarity": round(similarity, 4),
                         "threshold": round(threshold, 4),
                         "output_preview": output_text[:200],
-                        "goal_preview": self.goal_description[:200],
+                        "goal_preview": goal_description[:200],
                     },
                 )
 

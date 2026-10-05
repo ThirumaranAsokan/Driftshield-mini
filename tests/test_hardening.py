@@ -8,7 +8,7 @@ import time
 import pytest
 
 from driftshield_mini.alerts import AlertDispatcher
-from driftshield_mini.models import DetectorType, DriftEvent, Severity
+from driftshield_mini.models import BaselineStats, DetectorType, DriftEvent, Severity, TraceEvent
 from driftshield_mini.monitor import DriftMonitor
 from driftshield_mini.storage import TraceStore
 
@@ -131,3 +131,131 @@ def test_background_alert_submission_does_not_block(monkeypatch):
     assert started.wait(0.5)
     assert future is not None
     dispatcher.close()
+
+
+def test_resource_counter_cleanup_uses_start_time(tmp_db):
+    m = DriftMonitor(agent_id="resource-test", db_path=tmp_db)
+    detector = m.resource_spike
+    detector._run_counters = {
+        "z-newer": {
+            "total_tokens": 0,
+            "total_duration_ms": 0.0,
+            "tool_calls": 0,
+            "llm_calls": 0,
+            "start_time": 20.0,
+        },
+        "a-older": {
+            "total_tokens": 0,
+            "total_duration_ms": 0.0,
+            "tool_calls": 0,
+            "llm_calls": 0,
+            "start_time": 10.0,
+        },
+    }
+    for index in range(8):
+        detector._run_counters[f"run-{index}"] = {
+            "total_tokens": 0,
+            "total_duration_ms": 0.0,
+            "tool_calls": 0,
+            "llm_calls": 0,
+            "start_time": 30.0 + index,
+        }
+
+    detector._get_run_counter("new-run")
+
+    assert len(detector._run_counters) == 10
+    assert "a-older" not in detector._run_counters
+    assert "z-newer" in detector._run_counters
+
+
+def test_goal_detection_isolated_between_concurrent_runs(monkeypatch, tmp_db):
+    class FakeEmbedder:
+        def encode(self, text):
+            value = str(text).lower()
+            if "alpha" in value:
+                return [1.0, 0.0]
+            if "beta" in value:
+                return [0.0, 1.0]
+            return [1.0, 1.0]
+
+    monkeypatch.setattr(
+        "driftshield_mini.detectors.goal_drift.load_embedding_model",
+        lambda: FakeEmbedder(),
+    )
+    m = DriftMonitor(
+        agent_id="goal-concurrency",
+        db_path=tmp_db,
+        similarity_threshold=0.95,
+    )
+    barrier = threading.Barrier(2)
+    results = []
+
+    def worker(goal, output):
+        run_id = m.start_run(goal=goal)
+        barrier.wait()
+        results.append(m.record_event(
+            "llm_request",
+            "complete",
+            run_id=run_id,
+            output_data={"text": output},
+        ))
+
+    threads = [
+        threading.Thread(target=worker, args=("Alpha task", "Alpha task completed successfully.")),
+        threading.Thread(target=worker, args=("Beta task", "Beta task completed successfully.")),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert results == [[], []]
+    m.close()
+
+
+def test_resource_counter_updates_are_thread_safe(tmp_db):
+    m = DriftMonitor(agent_id="resource-concurrency", db_path=tmp_db)
+    detector = m.resource_spike
+    barrier = threading.Barrier(20)
+
+    def worker():
+        barrier.wait()
+        detector.check(
+            TraceEvent(
+                agent_id="resource-concurrency",
+                run_id="shared-run",
+                action_type="llm_request",
+                action_name="step",
+                token_count=1,
+            ),
+            BaselineStats(agent_id="resource-concurrency"),
+        )
+
+    threads = [threading.Thread(target=worker) for _ in range(20)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert detector._run_counters["shared-run"]["total_tokens"] == 20
+    assert detector._run_counters["shared-run"]["llm_calls"] == 20
+    m.close()
+
+
+def test_detector_exception_is_logged_and_does_not_break_monitor(caplog, tmp_db):
+    class ExplodingDetector:
+        def name(self):
+            return "test_detector"
+
+        def check(self, event, baseline):
+            raise RuntimeError("detector exploded")
+
+    m = DriftMonitor(agent_id="exception-observability", db_path=tmp_db)
+    m._detectors = [ExplodingDetector()]
+
+    with caplog.at_level("ERROR"):
+        assert m.record_event("state_transition", "work") == []
+
+    assert "Detector 'test_detector' failed: detector exploded" in caplog.text
+    assert len(m.store.get_traces(agent_id="exception-observability")) == 1
+    m.close()

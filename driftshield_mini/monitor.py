@@ -54,6 +54,8 @@ class DriftMonitor:
     ):
         self.agent_id = agent_id
         self._run_context = threading.local()
+        self._run_goals: dict[str, str] = {}
+        self._run_goals_lock = threading.RLock()
 
         # Storage
         self.store = TraceStore(db_path=db_path)
@@ -102,17 +104,21 @@ class DriftMonitor:
 
     def start_run(self, run_id: str | None = None, goal: str | None = None) -> str:
         """Manually start a monitored run. Returns the run ID."""
-        self._run_context.run_id = run_id or uuid.uuid4().hex[:12]
+        rid = run_id or uuid.uuid4().hex[:12]
+        self._run_context.run_id = rid
         if goal:
-            self.goal_drift.set_goal(goal)
-        logger.debug(f"Run started: {self._run_context.run_id}")
-        return self._run_context.run_id
+            with self._run_goals_lock:
+                self._run_goals[rid] = goal
+        logger.debug(f"Run started: {rid}")
+        return rid
 
     def end_run(self, run_id: str | None = None) -> None:
         """End a run and update the baseline."""
         rid = run_id or getattr(self._run_context, "run_id", None)
         if rid:
             self._baseline = self.calibrator.update_baseline(self.agent_id)
+            with self._run_goals_lock:
+                self._run_goals.pop(rid, None)
         if getattr(self._run_context, "run_id", None) == rid:
             self._run_context.run_id = None
 
@@ -133,6 +139,12 @@ class DriftMonitor:
         """
         rid = run_id or getattr(self._run_context, "run_id", None) or uuid.uuid4().hex[:12]
 
+        event_metadata = dict(metadata or {})
+        with self._run_goals_lock:
+            run_goal = self._run_goals.get(rid)
+        if run_goal and "goal_description" not in event_metadata:
+            event_metadata["goal_description"] = run_goal
+
         event = TraceEvent(
             agent_id=self.agent_id,
             run_id=rid,
@@ -142,7 +154,7 @@ class DriftMonitor:
             input_data=input_data or {},
             output_data=output_data or {},
             duration_ms=duration_ms,
-            metadata=metadata or {},
+            metadata=event_metadata,
         )
 
         # Store the trace

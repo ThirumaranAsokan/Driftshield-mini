@@ -148,24 +148,10 @@ Only the independent gold-labelled dataset is eligible for product-level TP/FP/F
 
 SWE-agent and tau2-bench results remain explicitly labelled as external outcome associations.
 
-## Assistant-reviewed preliminary set
+## Current status
 
-A deterministic 300-record sample can also be reviewed by the assistant as a preliminary validation pass. This is **not human gold truth** and must not be described as independent human annotation.
+The repository contains tooling to generate a deterministic 300-record review set and validate a reviewed dataset, but the repository does not currently contain an independently human-adjudicated gold set.
 
-The current review uses:
+An earlier experimental workflow used hard-coded review indices and heuristic labels. That approach was removed because it did not meet the standard required for independent detector validation. It must not be used as evidence of product accuracy.
 
-- deterministic reservoir sampling across the full 80,036-row training split (seed 20261005);
-- 200 calibration records and 100 locked holdout records;
-- 30 manually inspected assistant-review action-loop cases based on clear repeated edit/create stagnation;
-- goal_drift=false unless a material departure from the stated issue is observed;
-- resource_spike=true when estimated trajectory size exceeds 30,000 tokens or 250 turns.
-
-The latest GitHub Actions run (37324915578) completed both detector passes successfully. The holdout measurements were:
-
-- action_loop: TP=13, FP=36, FN=0, TN=51; precision=0.2653, recall=1.0, F1=0.4194, FPR=0.4138;
-- goal_drift: TP=0, FP=94, FN=0, TN=6; precision=0, recall=0, F1=0, FPR=0.94;
-- resource_spike: TP=0, FP=0, FN=5, TN=95; precision=0, recall=0, F1=0, FPR=0.
-
-These are **preliminary assistant-review measurements**, not product accuracy claims. The goal-drift result in particular shows that the current detector threshold/calibration strategy is not suitable for these SWE-agent trajectories without task-specific calibration. The resource result also shows that the independent 30,000-token review rule is below DriftShield's 50,000-token absolute safety limit.
-
-A genuine product-accuracy claim still requires independently adjudicated human labels, ideally with two reviewers and disagreement adjudication, before detector predictions are unblinded.
+The next credible step is human review of the generated 300 records, preferably with two reviewers for the 100-record holdout and explicit adjudication of disagreements. Only after those labels are frozen should the holdout be converted and detector accuracy metrics be reported.

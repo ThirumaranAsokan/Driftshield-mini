@@ -1,6 +1,6 @@
 # DriftShield Mini
 
-Behaviour monitoring for AI agents.
+Agent monitoring for AI applications.
 
 DriftShield Mini is an **in-process monitoring library** for agentic applications. It records observable agent behaviour locally and looks for three signal families:
 
@@ -10,7 +10,7 @@ DriftShield Mini is an **in-process monitoring library** for agentic application
 
 Traces, drift events, and baselines are stored in local SQLite. Goal embeddings use a local sentence-transformers model. Optional webhook alerts support Slack, Discord, and generic HTTP endpoints.
 
-> DriftShield reports behavioural signals. It does not prove that an agent has violated its task, and an alert is not automatically a failure. Production deployments should evaluate thresholds and false positives/negatives against their own workloads.
+> DriftShield reports observed signals. It does not prove that an agent has violated its task, and an alert is not automatically a failure. Production deployments should evaluate thresholds and false positives/negatives against their own workloads.
 
 ## Project status
 
@@ -368,10 +368,53 @@ The verified CI analysis ran all **800** FinTrace records and observed:
 - **0** rows above the 50,000 estimated-token resource threshold
 - **32** task types
 
-These are behavioural detector observations, not independent accuracy measurements. FinTrace does not provide independent DriftShield detector labels, so the repository does **not** claim FinTrace precision, recall, F1, FPR, TP, FP, FN, or TN from this analysis. The dataset's `golden_trajectories` are reference/evaluation material, not DriftShield detector labels, and the resource estimate is based on trajectory text/tool arguments rather than provider usage telemetry.
+These are detector observations, not independent accuracy measurements. FinTrace does not provide independent DriftShield detector labels, so the repository does **not** claim FinTrace precision, recall, F1, FPR, TP, FP, FN, or TN from this analysis. The dataset's `golden_trajectories` are reference/evaluation material, not DriftShield detector labels, and the resource estimate is based on trajectory text/tool arguments rather than provider usage telemetry.
 
 The next validation step is an independently labelled review subset, with calibration and holdout traces kept separate. The package is **not being published to PyPI yet**; release/package work remains pending until the validation work is complete.
 
+
+## Validation status and what is next
+
+The project now has a validation pipeline that is intentionally separated into three levels:
+
+1. **Deterministic synthetic tests** for regression coverage. These report TP/FP/FN/TN, precision, recall, F1, false-positive rate, and detection latency for controlled labelled cases.
+2. **External trajectory analysis** using public SWE-agent, FinTrace, and tau2-bench material. These runs exercise the detectors against real agent trajectories and are useful for real-trace evidence, parser coverage, and failure-mode discovery. They do **not** provide independent DriftShield detector labels, so their outcome associations are not product accuracy metrics.
+3. **Independent labelled validation**, which is the remaining step before making real-world detector accuracy claims. The repository contains the tooling to build a deterministic 300-trajectory review set from the public `nebius/SWE-agent-trajectories` dataset, split into 200 calibration records and 100 holdout records.
+
+### What has been verified
+
+The repository CI currently checks:
+
+- Python 3.10, 3.11, and 3.12
+- Ruff and the test suite
+- package build and wheel smoke testing
+- eight framework integration paths: CrewAI, OpenAI, Semantic Kernel, LlamaIndex, AutoGen, LangChain, Google ADK, and Haystack
+- FinTrace parsing and analysis across all 800 records
+- SWE-agent external trajectory analysis
+- published tau2-bench trajectory analysis
+- deterministic gold-review-set generation and validation tooling
+
+PR #17 is the current validation/documentation change under review. Its work is intentionally kept separate from package publication; PyPI publishing has not been performed.
+
+### Current engineering gate
+
+The codebase now includes regression coverage for concurrent run goals, shared resource-counter updates, and detector-exception observability. These tests are intended to catch cross-run state leakage and silent detector failures before new datasets or adapters are added.
+
+The most important remaining validation gate is **independent review of representative agent trajectories**.
+
+For the gold-validation process:
+
+1. Build the 300-record review set with `benchmarks/build_gold_review_set.py`.
+2. Review `action_loop`, `goal_drift`, and `resource_spike` independently of DriftShield's predictions.
+3. Record a short reason and confidence for every label.
+4. Keep the 200 calibration records separate from the 100 holdout records.
+5. Ideally have two reviewers label the holdout and adjudicate disagreements before looking at detector results.
+6. Convert the frozen labels with `benchmarks/convert_gold_review.py`.
+7. Run `benchmarks/validate_trace_dataset.py` and report the resulting confusion matrices and metrics.
+
+Do not use SWE-bench success/failure, FinTrace golden trajectories, or DriftShield's own predictions as substitutes for detector ground truth.
+
+See [docs/gold-validation.md](docs/gold-validation.md) and [CONTRIBUTING.md](CONTRIBUTING.md) for the review workflow.
 
 ## Development
 
@@ -396,7 +439,7 @@ python -m build
 
 The generated `dist/` artifacts are release candidates only; publishing is a separate step.
 
-## Privacy and regulated environments
+## Data handling and regulated environments
 
 DriftShield keeps monitoring data on the machine by default. That can be useful when an application should not send full agent traces to an external monitoring service, but local storage does not remove the need for data controls.
 
