@@ -1,5 +1,5 @@
 """
-DriftShield-Mini — Real-time behavioural drift detection for agentic AI systems.
+DriftShield-Mini — Real-time monitoring for agentic AI systems.
 
 Framework integrations:
     from driftshield_mini import DriftMonitor                    # LangChain / manual
