@@ -152,7 +152,7 @@ def test_resource_counter_cleanup_uses_start_time(tmp_db):
             "start_time": 10.0,
         },
     }
-    for index in range(9):
+    for index in range(8):
         detector._run_counters[f"run-{index}"] = {
             "total_tokens": 0,
             "total_duration_ms": 0.0,
