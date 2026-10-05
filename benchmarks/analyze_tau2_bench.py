@@ -11,7 +11,8 @@ import json
 from collections import Counter
 from pathlib import Path
 from statistics import quantiles
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 
 def _as_list(value: Any) -> list[Any]:
