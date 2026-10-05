@@ -50,9 +50,13 @@ class ResourceSpikeDetector(BaseDetector):
                 "llm_calls": 0,
                 "start_time": time.time(),
             }
-            # Cleanup old counters (keep last 10)
+            # Cleanup old counters (keep the 10 most recently started runs).
+            # Run IDs are opaque values, so lexical ordering is not a valid age check.
             if len(self._run_counters) > 10:
-                oldest = min(self._run_counters)
+                oldest = min(
+                    self._run_counters,
+                    key=lambda run_id: self._run_counters[run_id]["start_time"],
+                )
                 del self._run_counters[oldest]
         return self._run_counters[run_id]
 
