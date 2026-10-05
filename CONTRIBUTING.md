@@ -155,6 +155,8 @@ Never include secrets or private customer traces.
 
 The monitor is designed to be used from applications that may handle multiple runs at once. Avoid adding shared mutable detector state unless it is protected or scoped to a run. New concurrency-sensitive behaviour should include a deterministic regression test.
 
+Detector lifecycle is explicit: `DriftMonitor.end_run()` notifies detectors when a run is complete so per-run state can be released. Resource-spike counters are retained for all active runs rather than silently evicting an older active run; cleanup happens when that run ends. Changes to this lifecycle should include tests for both active-run isolation and end-of-run cleanup.
+
 When adding a new dataset or validation script, run the normal test and Ruff checks before opening the PR. Dataset-specific code must not bypass the same quality gates used by the core package.
 
 
@@ -198,7 +200,7 @@ For any new validation dataset, keep three things separate: the source dataset's
 A first contribution does not need to be large. A well-reproduced detector miss, a false-positive example with a regression test, an integration lifecycle test, or a carefully documented validation result is valuable.
 
 Before starting a large refactor, open an issue so the scope and expected evidence can be agreed first. This helps keep the project understandable as more contributors join.
-\n## Code style
+## Code style
 
 - Python 3.10+
 - Ruff for linting
@@ -218,6 +220,7 @@ Before asking for review:
 - [ ] Validation claims are backed by the correct type of evidence
 - [ ] Accuracy numbers are not presented unless detector labels are independently established
 - [ ] Concurrency-sensitive state has a regression test when applicable
+- [ ] Detector lifecycle state is released explicitly at run completion when applicable
 - [ ] Validation output/artifacts were inspected, not just the workflow status
 
 ## Where help is most useful right now

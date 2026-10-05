@@ -30,3 +30,7 @@ class BaseDetector(ABC):
     @abstractmethod
     def name(self) -> str:
         ...
+
+    def on_run_end(self, run_id: str) -> None:
+        """Release any per-run detector state after a monitored run ends."""
+        return

@@ -117,6 +117,8 @@ class DriftMonitor:
         rid = run_id or getattr(self._run_context, "run_id", None)
         if rid:
             self._baseline = self.calibrator.update_baseline(self.agent_id)
+            for detector in self._detectors:
+                detector.on_run_end(rid)
             with self._run_goals_lock:
                 self._run_goals.pop(rid, None)
         if getattr(self._run_context, "run_id", None) == rid:
