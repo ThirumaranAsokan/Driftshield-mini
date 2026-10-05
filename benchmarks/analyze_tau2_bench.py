@@ -9,9 +9,9 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
 from statistics import quantiles
-from collections.abc import Iterable
 from typing import Any
 
 
