@@ -1,0 +1,36 @@
+name: SWE-agent external validation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  swe-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[external-validation]"
+
+      - name: Analyze full SWE-agent training split
+        run: |
+          mkdir -p validation-results
+          python benchmarks/analyze_swe_agent_trajectories.py             --limit 80036             --split train             --output validation-results/swe-agent-analysis.json
+
+      - name: Upload SWE-agent analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: swe-agent-analysis
+          path: validation-results/swe-agent-analysis.json
+          if-no-files-found: error

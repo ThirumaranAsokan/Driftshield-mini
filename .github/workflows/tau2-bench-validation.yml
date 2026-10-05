@@ -1,0 +1,47 @@
+name: tau2-bench external validation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tau2-bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download published tau2-bench result files
+        run: |
+          mkdir -p external-data/tau2-bench
+          base="https://raw.githubusercontent.com/sierra-research/tau2-bench/main/data/tau2/results/final"
+          for file in \
+            "gpt-4.1-2025-04-14_airline_default_gpt-4.1-2025-04-14_4trials.json" \
+            "gpt-4.1-2025-04-14_retail_default_gpt-4.1-2025-04-14_4trials.json" \
+            "gpt-4.1-2025-04-14_telecom_default_gpt-4.1-2025-04-14_4trials.json"
+          do
+            curl --fail --location --retry 3 --retry-delay 2 \
+              "$base/$file" \
+              --output "external-data/tau2-bench/$file"
+          done
+
+      - name: Analyze published trajectories
+        run: |
+          mkdir -p validation-results
+          python benchmarks/analyze_tau2_bench.py \
+            external-data/tau2-bench/*.json \
+            --output validation-results/tau2-bench-analysis.json
+
+      - name: Upload tau2-bench analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: tau2-bench-analysis
+          path: validation-results/tau2-bench-analysis.json
+          if-no-files-found: error
