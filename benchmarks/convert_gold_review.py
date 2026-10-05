@@ -25,6 +25,15 @@ def code_commands(text: str) -> list[str]:
     return commands
 
 
+def extract_goal(text: str) -> str:
+    if "ISSUE:" in text:
+        goal = text.split("ISSUE:", 1)[1]
+        if "INSTRUCTIONS:" in goal:
+            goal = goal.split("INSTRUCTIONS:", 1)[0]
+        return goal.strip()
+    return text.strip()
+
+
 def to_run(row: dict[str, Any]) -> dict[str, Any]:
     events = []
     trajectory = row.get("trajectory", [])
@@ -40,8 +49,7 @@ def to_run(row: dict[str, Any]) -> dict[str, Any]:
         role = role_of(item)
 
         if role in {"ai", "assistant", "model"}:
-            commands = code_commands(text)
-            for command in commands:
+            for command in code_commands(text):
                 events.append(
                     {
                         "action_type": "tool_call",
@@ -54,8 +62,6 @@ def to_run(row: dict[str, Any]) -> dict[str, Any]:
                     }
                 )
 
-            # Preserve the assistant's complete reasoning/output so the real
-            # goal-drift detector receives LLM events as it would in production.
             events.append(
                 {
                     "action_type": "llm_request",
@@ -77,7 +83,7 @@ def to_run(row: dict[str, Any]) -> dict[str, Any]:
     goal = ""
     for item in trajectory:
         if isinstance(item, dict) and role_of(item) == "user":
-            goal = text_of(item)
+            goal = extract_goal(text_of(item))
             if goal:
                 break
 
@@ -86,7 +92,7 @@ def to_run(row: dict[str, Any]) -> dict[str, Any]:
         "expected_detectors": expected,
         "events": events,
         "review_confidence": row.get("review_confidence", ""),
-        "goal_source": "first user trajectory turn",
+        "goal_source": "ISSUE section of first user trajectory turn",
         "goal": goal,
     }
 
