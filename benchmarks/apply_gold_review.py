@@ -3,14 +3,6 @@
 This is explicitly a model-reviewed validation set, not human adjudication. It is
 independent of SWE outcome fields and DriftShield predictions, but should not be
 described as human gold truth.
-
-The review rules are frozen here so the generated labels are reproducible:
-- action_loop: clear repeated identical edit/create actions without meaningful
-  progress in the reviewed trajectory;
-- goal_drift: no material departure from the stated issue was observed in this
-  first-pass review;
-- resource_spike: estimated trajectory size >30,000 tokens (4 chars/token) or
-  >250 turns.
 """
 from __future__ import annotations
 
@@ -29,6 +21,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("review_file", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--split", choices=("all", "calibration", "holdout"), default="all")
     args = parser.parse_args()
 
     payload = json.loads(args.review_file.read_text(encoding="utf-8"))
@@ -36,15 +29,21 @@ def main() -> None:
     if len(rows) != 300:
         raise SystemExit(f"Expected exactly 300 review records, got {len(rows)}")
 
+    if args.split == "calibration":
+        rows = rows[:200]
+    elif args.split == "holdout":
+        rows = rows[200:]
+
     reviewed = []
     for index, row in enumerate(rows):
+        source_index = int(row["source_index"])
         trajectory = row.get("trajectory", [])
         estimated_tokens = sum(
             max(1, len(str(item.get("text") or "")) // 4)
             for item in trajectory
             if isinstance(item, dict)
         )
-        action_loop = index in ACTION_LOOP_INDICES
+        action_loop = source_index in ACTION_LOOP_INDICES
         resource_spike = estimated_tokens > 30_000 or len(trajectory) > 250
 
         reviewed.append(
@@ -89,6 +88,7 @@ def main() -> None:
             "and DriftShield outputs"
         ),
         "label_status": "frozen-for-self-review",
+        "split": args.split,
         "sampling": payload.get("sampling"),
         "runs": reviewed,
     }
