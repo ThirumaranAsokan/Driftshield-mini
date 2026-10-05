@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -15,19 +16,13 @@ def role_of(item: dict[str, Any]) -> str:
     return str(item.get("role", "")).lower()
 
 
-def action_name(text: str) -> str | None:
-    for line in text.splitlines():
-        line = line.strip()
-        lower = line.lower()
-        if lower.startswith(("action:", "command:")):
-            return line.split(":", 1)[1].strip().split()[0].lower()[:100]
-    marker = "will execute following command for "
-    lower = text.lower()
-    start = lower.find(marker)
-    if start >= 0:
-        rest = text[start + len(marker):]
-        return rest.split(":", 1)[0].strip().lower()[:100] or None
-    return None
+def code_commands(text: str) -> list[str]:
+    commands = []
+    for block in re.findall(r"\`\`\`(?:[^\n]*)\n(.*?)\`\`\`", text, re.DOTALL):
+        first = next((line.strip() for line in block.splitlines() if line.strip()), "")
+        if first:
+            commands.append(first[:160])
+    return commands
 
 
 def to_run(row: dict[str, Any]) -> dict[str, Any]:
@@ -43,35 +38,40 @@ def to_run(row: dict[str, Any]) -> dict[str, Any]:
         if not text:
             continue
         role = role_of(item)
-        action = action_name(text)
-        if action:
-            events.append(
-                {
-                    "action_type": "tool_call",
-                    "action_name": action,
-                    "token_count": max(1, len(text) // 4),
-                    "duration_ms": 0,
-                    "input_data": {},
-                    "output_data": {},
-                    "metadata": {"source_turn": index},
-                }
-            )
-        elif role in {"ai", "assistant", "model"}:
-            events.append(
-                {
-                    "action_type": "llm_request",
-                    "action_name": "assistant_output",
-                    "token_count": max(1, len(text) // 4),
-                    "duration_ms": 0,
-                    "input_data": {},
-                    "output_data": {"text": text},
-                    "metadata": {"source_turn": index},
-                }
-            )
+
+        if role in {"ai", "assistant", "model"}:
+            commands = code_commands(text)
+            if commands:
+                for command in commands:
+                    action_name = command.split()[0].lower()[:100]
+                    events.append(
+                        {
+                            "action_type": "tool_call",
+                            "action_name": action_name,
+                            "token_count": max(1, len(command) // 4),
+                            "duration_ms": 0,
+                            "input_data": {"command": command},
+                            "output_data": {},
+                            "metadata": {"source_turn": index},
+                        }
+                    )
+            else:
+                events.append(
+                    {
+                        "action_type": "llm_request",
+                        "action_name": "assistant_output",
+                        "token_count": max(1, len(text) // 4),
+                        "duration_ms": 0,
+                        "input_data": {},
+                        "output_data": {"text": text},
+                        "metadata": {"source_turn": index},
+                    }
+                )
 
     labels = row["labels"]
     expected = [
-        name for name in ("action_loop", "goal_drift", "resource_spike")
+        name
+        for name in ("action_loop", "goal_drift", "resource_spike")
         if labels.get(name) is True
     ]
     goal = ""
@@ -125,7 +125,8 @@ def main() -> None:
                 "schema_version": 1,
                 "source": "nebius/SWE-agent-trajectories",
                 "split": args.split,
-                "independently_reviewed": True,
+                "independently_reviewed": False,
+                "review_method": payload.get("review_method"),
                 "scenarios": scenarios,
             },
             indent=2,
