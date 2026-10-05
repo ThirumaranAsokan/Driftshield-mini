@@ -1,0 +1,36 @@
+name: Gold review set
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-review-set:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[external-validation]"
+      - name: Build deterministic 300-row review set
+        run: |
+          mkdir -p validation
+          python benchmarks/build_gold_review_set.py \\
+            --limit 300 \\
+            --seed 20261005 \\
+            --output validation/gold_review.json
+          rm -f validation/gold_review.private-manifest.json
+      - name: Upload blinded review set
+        uses: actions/upload-artifact@v4
+        with:
+          name: gold-review-set
+          path: validation/gold_review.json
+          if-no-files-found: error
