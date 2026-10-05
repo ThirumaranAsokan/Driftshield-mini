@@ -1,6 +1,8 @@
 # Contributing to DriftShield
 
-Thanks for taking a look at DriftShield. The project is still in alpha, so contributions that improve correctness, testing, documentation, integrations, and validation are especially useful.
+Thanks for taking a look at DriftShield. The project is still in alpha. Contributions that improve correctness, testing, integrations, documentation, and validation are especially useful.
+
+The package is not published to PyPI. Release publication is intentionally separate from normal development and validation.
 
 ## Before you start
 
@@ -49,7 +51,7 @@ python -m build
 
 For validation-tool changes, also run the relevant benchmark or analysis command and include the command and result in the pull request description.
 
-GitHub Actions runs the main CI, integration, and external-validation workflows. A green workflow is evidence that the checked path passed; it is not a substitute for independent detector labelling.
+GitHub Actions runs the main CI, integration, and external-validation workflows. A green workflow means the configured checks passed for that commit. It is not exhaustive proof of every code path and it is not a substitute for independent detector labelling.
 
 ## Making a code change
 
@@ -149,6 +151,12 @@ If DriftShield misses a case or produces an unexpected alert, open an issue with
 
 Never include secrets or private customer traces.
 
+## Concurrency and state
+
+The monitor is designed to be used from applications that may handle multiple runs at once. Avoid adding shared mutable detector state unless it is protected or scoped to a run. New concurrency-sensitive behaviour should include a deterministic regression test.
+
+When adding a new dataset or validation script, run the normal test and Ruff checks before opening the PR. Dataset-specific code must not bypass the same quality gates used by the core package.
+
 ## Code style
 
 - Python 3.10+
@@ -168,6 +176,8 @@ Before asking for review:
 - [ ] Documentation is updated if behaviour or configuration changed
 - [ ] Validation claims are backed by the correct type of evidence
 - [ ] Accuracy numbers are not presented unless detector labels are independently established
+- [ ] Concurrency-sensitive state has a regression test when applicable
+- [ ] Validation output/artifacts were inspected, not just the workflow status
 
 ## Where help is most useful right now
 
