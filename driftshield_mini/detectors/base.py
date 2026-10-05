@@ -33,4 +33,4 @@ class BaseDetector(ABC):
 
     def on_run_end(self, run_id: str) -> None:
         """Release any per-run detector state after a monitored run ends."""
-        return None
+        return
