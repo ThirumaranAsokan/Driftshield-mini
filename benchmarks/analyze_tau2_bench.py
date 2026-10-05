@@ -52,13 +52,21 @@ def _usage_tokens(sim: dict[str, Any]) -> int | None:
         usage = message.get("usage")
         if not isinstance(usage, dict):
             continue
-        for key in ("total_tokens", "input_tokens", "output_tokens"):
-            value = usage.get(key)
-            if isinstance(value, (int, float)):
-                total += int(value)
-                found = True
-        if "total_tokens" in usage:
+        value = usage.get("total_tokens")
+        if isinstance(value, (int, float)):
+            total += int(value)
+            found = True
             continue
+        input_tokens = usage.get("input_tokens")
+        output_tokens = usage.get("output_tokens")
+        message_total = 0
+        if isinstance(input_tokens, (int, float)):
+            message_total += int(input_tokens)
+        if isinstance(output_tokens, (int, float)):
+            message_total += int(output_tokens)
+        if message_total:
+            total += message_total
+            found = True
     return total if found else None
 
 
