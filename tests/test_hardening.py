@@ -131,3 +131,38 @@ def test_background_alert_submission_does_not_block(monkeypatch):
     assert started.wait(0.5)
     assert future is not None
     dispatcher.close()
+
+
+def test_resource_counter_cleanup_uses_start_time(tmp_db):
+    m = DriftMonitor(agent_id="resource-test", db_path=tmp_db)
+    detector = m.resource_spike
+    detector._run_counters = {
+        "z-newer": {
+            "total_tokens": 0,
+            "total_duration_ms": 0.0,
+            "tool_calls": 0,
+            "llm_calls": 0,
+            "start_time": 20.0,
+        },
+        "a-older": {
+            "total_tokens": 0,
+            "total_duration_ms": 0.0,
+            "tool_calls": 0,
+            "llm_calls": 0,
+            "start_time": 10.0,
+        },
+    }
+    for index in range(9):
+        detector._run_counters[f"run-{index}"] = {
+            "total_tokens": 0,
+            "total_duration_ms": 0.0,
+            "tool_calls": 0,
+            "llm_calls": 0,
+            "start_time": 30.0 + index,
+        }
+
+    detector._get_run_counter("new-run")
+
+    assert len(detector._run_counters) == 10
+    assert "a-older" not in detector._run_counters
+    assert "z-newer" in detector._run_counters
