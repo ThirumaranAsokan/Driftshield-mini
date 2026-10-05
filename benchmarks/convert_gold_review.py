@@ -41,32 +41,32 @@ def to_run(row: dict[str, Any]) -> dict[str, Any]:
 
         if role in {"ai", "assistant", "model"}:
             commands = code_commands(text)
-            if commands:
-                for command in commands:
-                    action_name = command.split()[0].lower()[:100]
-                    events.append(
-                        {
-                            "action_type": "tool_call",
-                            "action_name": action_name,
-                            "token_count": max(1, len(command) // 4),
-                            "duration_ms": 0,
-                            "input_data": {"command": command},
-                            "output_data": {},
-                            "metadata": {"source_turn": index},
-                        }
-                    )
-            else:
+            for command in commands:
                 events.append(
                     {
-                        "action_type": "llm_request",
-                        "action_name": "assistant_output",
-                        "token_count": max(1, len(text) // 4),
+                        "action_type": "tool_call",
+                        "action_name": command.split()[0].lower()[:100],
+                        "token_count": max(1, len(command) // 4),
                         "duration_ms": 0,
-                        "input_data": {},
-                        "output_data": {"text": text},
+                        "input_data": {"command": command},
+                        "output_data": {},
                         "metadata": {"source_turn": index},
                     }
                 )
+
+            # Preserve the assistant's complete reasoning/output so the real
+            # goal-drift detector receives LLM events as it would in production.
+            events.append(
+                {
+                    "action_type": "llm_request",
+                    "action_name": "assistant_output",
+                    "token_count": max(1, len(text) // 4),
+                    "duration_ms": 0,
+                    "input_data": {},
+                    "output_data": {"text": text},
+                    "metadata": {"source_turn": index},
+                }
+            )
 
     labels = row["labels"]
     expected = [
