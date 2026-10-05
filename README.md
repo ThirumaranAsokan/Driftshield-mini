@@ -18,7 +18,7 @@ Traces, drift events, and baselines are stored in local SQLite. Goal embeddings 
 
 Version **0.2.2** is the current project version. The package has **not yet been published to PyPI**. Until the release artifacts have been built and verified, install DriftShield from the Git repository.
 
-The repository currently has automated tests and CI for Python 3.10, 3.11, and 3.12, plus import-level checks for the supported framework adapters. The validation suite also contains deterministic synthetic benchmarks and separate pilot/external-analysis tooling.
+The repository currently has automated tests and CI for Python 3.10, 3.11, and 3.12, plus import-level checks for the supported framework adapters. The validation suite also contains deterministic synthetic benchmarks and separate pilot/external-analysis tooling. The detector test suite includes boundary cases for repeated actions, repeated sequences, interleaved runs, resource thresholds, severity bands, and active-run counter lifecycle.
 
 Synthetic benchmark results and external trajectory analysis are **not production accuracy claims**.
 
@@ -394,11 +394,11 @@ The repository CI currently checks:
 - published tau2-bench trajectory analysis
 - deterministic gold-review-set generation and validation tooling
 
-PR #17 is the current validation/documentation change under review. Its work is intentionally kept separate from package publication; PyPI publishing has not been performed.
+The current development pass also adds focused detector boundary tests and makes per-run detector cleanup explicit. These changes are intentionally kept separate from package publication; PyPI publishing has not been performed.
 
 ### Current engineering gate
 
-The codebase now includes regression coverage for concurrent run goals, shared resource-counter updates, and detector-exception observability. These tests are intended to catch cross-run state leakage and silent detector failures before new datasets or adapters are added.
+The codebase now includes regression coverage for concurrent run goals, shared resource-counter updates, detector-exception observability, and detector lifecycle cleanup. Resource counters remain available for active runs and are released explicitly when a run ends, avoiding silent eviction of active-run state. These tests are intended to catch cross-run state leakage and silent detector failures before new datasets or adapters are added.
 
 The most important remaining validation gate is **independent review of representative agent trajectories**.
 
