@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 
 from driftshield_mini.detectors.base import BaseDetector
@@ -37,6 +38,7 @@ class ResourceSpikeDetector(BaseDetector):
 
         # Running counters per run (reset on new run)
         self._run_counters: dict[str, dict] = {}
+        self._counter_lock = threading.RLock()
 
     def name(self) -> str:
         return "resource_spike"
@@ -68,24 +70,25 @@ class ResourceSpikeDetector(BaseDetector):
         if not self.enabled:
             return None
 
-        counter = self._get_run_counter(event.run_id)
-        counter["total_tokens"] += event.token_count
-        counter["total_duration_ms"] += event.duration_ms
-        if event.action_type == "tool_call":
-            counter["tool_calls"] += 1
-        elif event.action_type == "llm_request":
-            counter["llm_calls"] += 1
+        with self._counter_lock:
+            counter = self._get_run_counter(event.run_id)
+            counter["total_tokens"] += event.token_count
+            counter["total_duration_ms"] += event.duration_ms
+            if event.action_type == "tool_call":
+                counter["tool_calls"] += 1
+            elif event.action_type == "llm_request":
+                counter["llm_calls"] += 1
 
-        # Check against baseline (statistical detection)
-        if baseline and baseline.is_calibrated:
-            drift = self._check_baseline_spike(event, baseline, counter)
+            # Check against baseline (statistical detection)
+            if baseline and baseline.is_calibrated:
+                drift = self._check_baseline_spike(event, baseline, counter)
+                if drift:
+                    return drift
+
+            # Check against absolute limits (safety net even without baseline)
+            drift = self._check_absolute_limits(event, counter)
             if drift:
                 return drift
-
-        # Check against absolute limits (safety net even without baseline)
-        drift = self._check_absolute_limits(event, counter)
-        if drift:
-            return drift
 
         return None
 
