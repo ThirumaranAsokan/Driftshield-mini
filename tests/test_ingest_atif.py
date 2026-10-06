@@ -1,3 +1,5 @@
+import json
+
 from benchmarks.collect_atif import collect
 from benchmarks.ingest_atif import convert_trajectory
 
@@ -48,7 +50,7 @@ def test_convert_finance_style_atif_preserves_tool_calls_and_real_metrics():
 def test_collect_atif_does_not_record_local_filesystem_paths(tmp_path):
     trajectory = tmp_path / "nested" / "trajectory_atif.json"
     trajectory.parent.mkdir()
-    trajectory.write_text(__import__("json").dumps(_payload()), encoding="utf-8")
+    trajectory.write_text(json.dumps(_payload()), encoding="utf-8")
 
     dataset = collect(tmp_path)
     source_file = dataset["scenarios"][0]["runs"][0]["metadata"]["source_file"]
