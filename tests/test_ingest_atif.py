@@ -1,8 +1,9 @@
+from benchmarks.collect_atif import collect
 from benchmarks.ingest_atif import convert_trajectory
 
 
-def test_convert_finance_style_atif_preserves_tool_calls_and_real_metrics():
-    payload = {
+def _payload():
+    return {
         "schema_version": "ATIF-v1.7",
         "session_id": "finance:q001",
         "agent": {"name": "finance", "model_name": "test/model"},
@@ -18,26 +19,16 @@ def test_convert_finance_style_atif_preserves_tool_calls_and_real_metrics():
                 "tool_calls": [
                     {"tool_call_id": "call-1", "function_name": "web_search", "arguments": {"search_query": "revenue"}}
                 ],
-                "observation": {
-                    "results": [
-                        {"source_call_id": "call-1", "content": "result"}
-                    ]
-                },
-                "metrics": {
-                    "prompt_tokens": 100,
-                    "completion_tokens": 25,
-                    "extra": {"duration_seconds": 1.5},
-                },
+                "observation": {"results": [{"source_call_id": "call-1", "content": "result"}]},
+                "metrics": {"prompt_tokens": 100, "completion_tokens": 25, "extra": {"duration_seconds": 1.5}},
             },
         ],
-        "final_metrics": {
-            "total_prompt_tokens": 100,
-            "total_completion_tokens": 25,
-            "total_steps": 3,
-        },
+        "final_metrics": {"total_prompt_tokens": 100, "total_completion_tokens": 25, "total_steps": 3},
     }
 
-    result = convert_trajectory(payload, "trajectory_atif.json")
+
+def test_convert_finance_style_atif_preserves_tool_calls_and_real_metrics():
+    result = convert_trajectory(_payload(), "trajectory_atif.json")
     run = result["scenarios"][0]["runs"][0]
 
     assert run["run_id"] == "finance:q001"
@@ -52,3 +43,15 @@ def test_convert_finance_style_atif_preserves_tool_calls_and_real_metrics():
     assert tool_event["action_type"] == "tool_call"
     assert tool_event["action_name"] == "web_search"
     assert tool_event["output_data"]["result"] == "result"
+
+
+def test_collect_atif_does_not_record_local_filesystem_paths(tmp_path):
+    trajectory = tmp_path / "nested" / "trajectory_atif.json"
+    trajectory.parent.mkdir()
+    trajectory.write_text(__import__("json").dumps(_payload()), encoding="utf-8")
+
+    dataset = collect(tmp_path)
+    source_file = dataset["scenarios"][0]["runs"][0]["metadata"]["source_file"]
+
+    assert source_file == "trajectory_atif.json"
+    assert str(tmp_path) not in source_file
