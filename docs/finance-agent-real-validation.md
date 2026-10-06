@@ -62,4 +62,29 @@ rather than the full benchmark. Freeze the question IDs and model/tool
 configuration used for the run, preserve the raw ATIF files, and create a
 separate calibration/holdout labelling record before evaluating detectors.
 
+
+### Frozen pilot set
+
+The first controlled run uses the 10-question subset in
+`validation/finance_agent_v2_pilot.txt`. The file is copied from the public
+Finance Agent v2 question workload and deliberately excludes the benchmark
+rubrics. Keep this question set unchanged for the first calibration/holdout
+exercise so that reruns remain comparable.
+
+Run the Finance Agent with the selected model and documented tool/API
+configuration, using one question per run where practical. Preserve the raw
+`trajectory_atif.json` output for every question before conversion.
+
+After execution, collect the raw ATIF files with:
+
+~~~bash
+python benchmarks/collect_atif.py path/to/finance-agent-logs \\
+  --output finance_runs.json
+~~~
+
+Then create a separate reviewer copy and independently label each reviewed run
+for `action_loop`, `goal_drift`, and `resource_spike`. Do not inspect or use
+DriftShield predictions as the reason for assigning those labels. Freeze the
+calibration and holdout split before calculating detector metrics.
+
 Package publication remains separate from this validation work.
