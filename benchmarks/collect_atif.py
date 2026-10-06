@@ -21,7 +21,7 @@ def collect(root: Path) -> dict[str, Any]:
 
     for path in files:
         payload = json.loads(path.read_text(encoding="utf-8"))
-        converted = convert_trajectory(payload, str(path))
+        converted = convert_trajectory(payload, path.name)
         scenario = converted["scenarios"][0]
         scenario_name = scenario["name"] or scenario_name
         goal = goal or scenario["goal"]
