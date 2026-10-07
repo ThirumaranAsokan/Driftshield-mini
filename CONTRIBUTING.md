@@ -113,6 +113,16 @@ For a credible accuracy claim, use two reviewers for the holdout when possible a
 
 The current repository does **not** claim that the assistant-reviewed preliminary labels are human gold truth.
 
+### Finance Agent v2 real-agent pilot
+
+The first controlled finance-agent execution uses the frozen question set at `validation/finance_agent_v2_pilot.txt`. Run the real Finance Agent v2 workload, preserve its raw `trajectory_atif.json` files, and convert them with the repository ingestion tools before review.
+
+Keep the source workload's answer rubrics and outcomes separate from DriftShield detector labels. A reviewer must independently assess `action_loop`, `goal_drift`, and `resource_spike` without using DriftShield's prediction as the reason for a label. Freeze calibration and holdout records before reporting detector metrics.
+
+The Finance Agent workflow is described in [docs/finance-agent-real-validation.md](docs/finance-agent-real-validation.md). The ingestion path is intended to preserve provider/runtime telemetry available in ATIF and must not invent missing tool timing data.
+
+Do not publish finance accuracy numbers from the pilot until the labels are independently established and the evaluation set is frozen.
+
 ## External datasets
 
 The project currently has analysis tooling for:
