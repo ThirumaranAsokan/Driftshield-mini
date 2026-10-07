@@ -373,6 +373,27 @@ These are detector observations, not independent accuracy measurements. FinTrace
 The next validation step is an independently labelled review subset, with calibration and holdout traces kept separate. The package is **not being published to PyPI yet**; release/package work remains pending until the validation work is complete.
 
 
+## Finance Agent v2 real-agent pilot
+
+The first controlled real-agent validation path uses the public Vals Finance Agent v2 workload. The repository includes:
+
+- `benchmarks/ingest_atif.py` for ATIF v1.7 trajectory conversion
+- `benchmarks/collect_atif.py` for collecting multiple Finance Agent runs
+- `docs/finance-agent-real-validation.md` for the execution and labelling procedure
+- `validation/finance_agent_v2_pilot.txt` containing the frozen 10-question pilot set
+
+The pilot is deliberately label-neutral at ingestion time. Finance Agent answer quality, benchmark rubrics, and task outcomes are not used as DriftShield detector labels. The reviewed runs must be independently labelled for `action_loop`, `goal_drift`, and `resource_spike` before detector metrics are calculated.
+
+The intended sequence is:
+
+1. run the real Finance Agent workload and preserve the raw ATIF traces
+2. convert and review the traces without assigning inferred detector labels
+3. independently label the three detector families
+4. freeze calibration and holdout records
+5. calculate precision, recall, F1, false-positive rate, detection latency, and overhead
+
+This pilot is the next evidence step; it is not yet a finance detector-accuracy claim. Package publication remains separate and the package is not published to PyPI.
+
 ## Validation status and what is next
 
 The project now has a validation pipeline that is intentionally separated into three levels:
