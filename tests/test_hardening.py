@@ -259,3 +259,19 @@ def test_detector_exception_is_logged_and_does_not_break_monitor(caplog, tmp_db)
     assert "Detector 'test_detector' failed: detector exploded" in caplog.text
     assert len(m.store.get_traces(agent_id="exception-observability")) == 1
     m.close()
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("", 0),
+        ("a", 0),
+        ("abcd", 1),
+        ("abcdefgh", 2),
+        ("😀😀😀😀", 1),
+    ],
+)
+def test_langchain_token_estimate_is_character_heuristic(text, expected):
+    from driftshield_mini.monitor import _LangChainWrapper
+
+    assert _LangChainWrapper._estimate_tokens(text) == expected
+
