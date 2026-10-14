@@ -4,6 +4,7 @@ Only task prompts and observed output trajectories are included. Reference answe
 golden trajectories, benchmark scores, and DriftShield predictions are excluded.
 No detector labels are inferred by this script.
 """
+
 from __future__ import annotations
 
 import argparse
