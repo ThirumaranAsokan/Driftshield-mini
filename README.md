@@ -16,7 +16,7 @@ Traces, drift events, and baselines are stored in local SQLite. Goal embeddings 
 
 **Current status: alpha / source release.**
 
-Version **0.2.2** is the current project version. The package has **not yet been published to PyPI**. Until the release artifacts have been built and verified, install DriftShield from the Git repository.
+The source repository is currently at version **0.2.2**. Earlier versions (**0.1.0, 0.1.1, 0.2.0, and 0.2.1**) have been published to PyPI; **0.2.2 has not been released to PyPI**. This repository remains in alpha, and no new package release is planned until real-agent validation and the remaining release checks are complete. For the latest source changes, install from the Git repository.
 
 The repository currently has automated tests and CI for Python 3.10, 3.11, and 3.12, plus import-level checks for the supported framework adapters. The validation suite also contains deterministic synthetic benchmarks and separate pilot/external-analysis tooling. The detector test suite includes boundary cases for repeated actions, repeated sequences, interleaved runs, resource thresholds, severity bands, and active-run counter lifecycle.
 
@@ -98,6 +98,10 @@ monitor.close()
 ```
 
 For framework-specific integrations, use the adapters described below.
+
+### LangChain instrumentation scope
+
+`monitor.wrap(existing_agent)` currently records the outer `invoke`, completion, error, elapsed time, and a rough output-token estimate. It does **not** automatically record every internal tool call or intermediate model request made inside a LangChain agent. To make action-loop detection useful, instrument the relevant tools or callbacks to call `record_event(action_type="tool_call", action_name=..., run_id=...)` for each tool invocation. When provider token usage is available, pass that measured count to `record_event(token_count=...)`; the wrapper's character-based estimate is only a fallback, not provider telemetry.
 
 ## Detection
 
