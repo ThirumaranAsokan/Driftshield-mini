@@ -15,7 +15,6 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-
 DETECTORS = ("action_loop", "goal_drift", "resource_spike")
 
 
