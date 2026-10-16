@@ -101,3 +101,10 @@ Use the reviewed subset to create independent labels for:
 Then convert those reviewed records into the existing labelled-trace format used by benchmarks/validate_trace_dataset.py. Keep calibration and holdout records separate.
 
 Only after that step should DriftShield precision, recall, F1, FPR, and detection latency be reported for this external financial workload.
+
+
+## Generate the review file
+
+The `FinTrace blinded review set` workflow builds the review file from the checked-in FinTrace test set on `main`, then checks that all 300 records have trajectory excerpts, labels and reasons are blank, IDs are unique, and the 200/100 calibration/holdout split is present. Download the `fintrace-blinded-review-set` artifact from a successful workflow run. The artifact expires after 14 days; do not commit it because it contains raw trajectory text.
+
+If the workflow fails the content checks, do not use the artifact for review. Fix the schema or extraction problem first. A successful workflow status alone is not evidence that the review records contain usable trajectories.
