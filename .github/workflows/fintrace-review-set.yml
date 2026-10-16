@@ -1,0 +1,86 @@
+name: FinTrace blinded review set
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/build_fintrace_review_set.py"
+      - "tests/test_fintrace_review_set.py"
+      - "docs/fintrace-external-analysis.md"
+      - ".github/workflows/fintrace-review-set.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-review-set:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install review-set dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[external-validation]"
+
+      - name: Restore FinTrace source data
+        run: |
+          git fetch origin main
+          git checkout origin/main -- FinTrace_testset.json.gz
+          test -s FinTrace_testset.json.gz
+          gzip -t FinTrace_testset.json.gz
+          gzip -cd FinTrace_testset.json.gz > FinTrace_testset.json
+
+      - name: Build blinded review set
+        run: |
+          mkdir -p validation-results
+          python benchmarks/build_fintrace_review_set.py \
+            --input FinTrace_testset.json \
+            --limit 300 \
+            --seed 20261015 \
+            --calibration-count 200 \
+            --output validation-results/fintrace-review-set.json
+
+      - name: Validate review-set contents and blinding
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("validation-results/fintrace-review-set.json")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          records = payload.get("runs", [])
+          assert len(records) == 300, f"Expected 300 records, got {len(records)}"
+          assert payload.get("label_status") == "unlabelled"
+          assert payload["sampling"]["calibration_count"] == 200
+          assert payload["sampling"]["holdout_count"] == 100
+          assert len({row["review_id"] for row in records}) == len(records), "Duplicate review IDs"
+          assert all(row.get("trajectory_excerpt") for row in records), "Found empty trajectory excerpt"
+          assert all(
+              all(value == "" for value in row.get("labels", {}).values())
+              and all(value == "" for value in row.get("review_reason", {}).values())
+              for row in records
+          ), "Labels/reasons must remain blank before human review"
+          forbidden = ("reference_answer", "output_answer", "golden_trajectories", "signals")
+          assert not any(
+              key in row
+              for row in records
+              for key in forbidden
+          ), "Found a field that should be excluded from the blinded review set"
+          print("Validated 300 blinded records: 200 calibration, 100 holdout; all excerpts present and labels blank.")
+          PY
+
+      - name: Upload blinded review set
+        uses: actions/upload-artifact@v4
+        with:
+          name: fintrace-blinded-review-set
+          path: validation-results/fintrace-review-set.json
+          if-no-files-found: error
+          retention-days: 14
