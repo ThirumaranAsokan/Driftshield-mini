@@ -80,6 +80,16 @@ The excerpt is capped at 80 messages by default; use --max-messages to change th
 
 Keep calibration and holdout records separate. Do not calculate accuracy metrics until labels are frozen and the holdout has not been used to tune thresholds.
 
+## Labelling rules for reviewers
+
+Use one of these values for each detector label: `positive`, `negative`, or `uncertain`. Leave a label blank only while the record has not been reviewed. Record a short reason for every positive, negative, or uncertain decision. Do not look at DriftShield alerts while assigning labels.
+
+- **action_loop — positive:** repeated actions or action sequences continue without meaningful progress, based on the task and observed results. A retry, polling cycle, or repeated lookup is not automatically a loop; mark legitimate repetition negative and ambiguous cases uncertain.
+- **goal_drift — positive:** the observed actions or responses materially depart from the stated task goal without a task-relevant reason. A different tool path, extra research, or a different answer from the benchmark reference is not sufficient by itself.
+- **resource_spike — positive:** reliable run-level usage or resource evidence shows unusually high consumption against a threshold fixed before evaluation. A long-looking excerpt or rough token estimate alone is not enough to claim measured resource usage. If provider usage, token counts, or a defensible pre-agreed proxy is unavailable, mark this label uncertain rather than guessing.
+
+For the first pass, have two reviewers label the same calibration subset independently and resolve disagreements before finalising the rubric. Keep the holdout labels sealed from threshold tuning; have reviewers label it only after the detector configuration is frozen. If only one reviewer is available, document that limitation and do not describe the labels as independently adjudicated.
+
 ## Next validation step
 
 Use the reviewed subset to create independent labels for:
