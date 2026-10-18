@@ -22,8 +22,9 @@ Input format:
 }
 
 The harness does not invent labels. Expected detector sets must be supplied by
-the dataset author. Results are engineering measurements, not production
-accuracy claims.
+the dataset author. Runs explicitly marked unlabelled are excluded from confusion
+matrices and accuracy metrics. Results are engineering measurements, not
+production accuracy claims.
 """
 
 from __future__ import annotations
@@ -51,6 +52,8 @@ def validate_dataset(path: Path) -> dict:
     counts = Counter()
     latency_samples: dict[str, list[int]] = {detector.value: [] for detector in DetectorType}
     run_results = []
+    labelled_runs = 0
+    unlabelled_runs = 0
 
     with tempfile.TemporaryDirectory(prefix="driftshield-validation-") as tmp:
         for scenario_index, scenario in enumerate(scenarios):
@@ -85,18 +88,30 @@ def validate_dataset(path: Path) -> dict:
                         predicted.add(item.detector)
                         first_detection_index.setdefault(item.detector, event_index)
 
+                metadata = run.get("metadata") or {}
+                labels_status = str(metadata.get("labels_status", "labelled")).lower()
+                if labels_status not in {"labelled", "unlabelled"}:
+                    raise ValueError(
+                        f"Unsupported labels_status {labels_status!r} for run {run_id!r}; "
+                        "expected 'labelled' or 'unlabelled'"
+                    )
+
                 expected = _detectors(list(run.get("expected_detectors", [])))
-                for detector in DetectorType:
-                    expected_hit = detector in expected
-                    predicted_hit = detector in predicted
-                    if expected_hit and predicted_hit:
-                        counts[f"{detector.value}.tp"] += 1
-                    elif not expected_hit and predicted_hit:
-                        counts[f"{detector.value}.fp"] += 1
-                    elif expected_hit and not predicted_hit:
-                        counts[f"{detector.value}.fn"] += 1
-                    else:
-                        counts[f"{detector.value}.tn"] += 1
+                if labels_status == "labelled":
+                    labelled_runs += 1
+                    for detector in DetectorType:
+                        expected_hit = detector in expected
+                        predicted_hit = detector in predicted
+                        if expected_hit and predicted_hit:
+                            counts[f"{detector.value}.tp"] += 1
+                        elif not expected_hit and predicted_hit:
+                            counts[f"{detector.value}.fp"] += 1
+                        elif expected_hit and not predicted_hit:
+                            counts[f"{detector.value}.fn"] += 1
+                        else:
+                            counts[f"{detector.value}.tn"] += 1
+                else:
+                    unlabelled_runs += 1
 
                 latency = {}
                 for detector in sorted(expected, key=lambda item: item.value):
@@ -110,6 +125,7 @@ def validate_dataset(path: Path) -> dict:
                 run_results.append({
                     "scenario": name,
                     "run_id": run_id,
+                    "labels_status": labels_status,
                     "expected": sorted(item.value for item in expected),
                     "predicted": sorted(item.value for item in predicted),
                     "detection_latency_events": latency,
@@ -124,24 +140,30 @@ def validate_dataset(path: Path) -> dict:
         fp = counts[f"{detector.value}.fp"]
         fn = counts[f"{detector.value}.fn"]
         tn = counts[f"{detector.value}.tn"]
-        precision = tp / (tp + fp) if tp + fp else 0.0
-        recall = tp / (tp + fn) if tp + fn else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-        fpr = fp / (fp + tn) if fp + tn else 0.0
         samples = latency_samples[detector.value]
+        if labelled_runs:
+            precision = tp / (tp + fp) if tp + fp else 0.0
+            recall = tp / (tp + fn) if tp + fn else 0.0
+            f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+            fpr = fp / (fp + tn) if fp + tn else 0.0
+        else:
+            precision = recall = f1 = fpr = None
+
         metrics[detector.value] = {
             "tp": tp, "fp": fp, "fn": fn, "tn": tn,
             "mean_detection_latency_events": round(sum(samples) / len(samples), 4) if samples else None,
             "max_detection_latency_events": max(samples) if samples else None,
-            "precision": round(precision, 4),
-            "recall": round(recall, 4),
-            "f1": round(f1, 4),
-            "false_positive_rate": round(fpr, 4),
+            "precision": round(precision, 4) if precision is not None else None,
+            "recall": round(recall, 4) if recall is not None else None,
+            "f1": round(f1, 4) if f1 is not None else None,
+            "false_positive_rate": round(fpr, 4) if fpr is not None else None,
         }
 
     return {
         "scenarios": len(scenarios),
         "runs": len(run_results),
+        "labelled_runs": labelled_runs,
+        "unlabelled_runs": unlabelled_runs,
         "metrics": metrics,
         "runs_detail": run_results,
     }
