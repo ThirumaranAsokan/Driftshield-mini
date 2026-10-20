@@ -151,14 +151,8 @@ def validate_dataset(path: Path) -> dict:
         # contains no positive examples for that detector.
         precision = tp / (tp + fp) if tp + fp else None
         recall = tp / (tp + fn) if tp + fn else None
-        if precision is not None and recall is not None:
-            f1 = (
-                2 * precision * recall / (precision + recall)
-                if precision + recall
-                else 0.0
-            )
-        else:
-            f1 = None
+        f1_denominator = 2 * tp + fp + fn
+        f1 = 2 * tp / f1_denominator if f1_denominator else None
         fpr = fp / (fp + tn) if fp + tn else None
 
         metrics[detector.value] = {
