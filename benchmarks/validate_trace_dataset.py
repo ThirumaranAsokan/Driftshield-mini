@@ -141,13 +141,20 @@ def validate_dataset(path: Path) -> dict:
         fn = counts[f"{detector.value}.fn"]
         tn = counts[f"{detector.value}.tn"]
         samples = latency_samples[detector.value]
-        if labelled_runs:
-            precision = tp / (tp + fp) if tp + fp else 0.0
-            recall = tp / (tp + fn) if tp + fn else 0.0
-            f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-            fpr = fp / (fp + tn) if fp + tn else 0.0
+        # A metric is undefined when its denominator is zero. In particular,
+        # recall/F1 must not look like a measured zero when the reviewed set
+        # contains no positive examples for that detector.
+        precision = tp / (tp + fp) if tp + fp else None
+        recall = tp / (tp + fn) if tp + fn else None
+        if precision is not None and recall is not None:
+            f1 = (
+                2 * precision * recall / (precision + recall)
+                if precision + recall
+                else 0.0
+            )
         else:
-            precision = recall = f1 = fpr = None
+            f1 = None
+        fpr = fp / (fp + tn) if fp + tn else None
 
         metrics[detector.value] = {
             "tp": tp, "fp": fp, "fn": fn, "tn": tn,
