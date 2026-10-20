@@ -3,10 +3,10 @@ import json
 from benchmarks.validate_trace_dataset import validate_dataset
 
 
-def _write_dataset(tmp_path, labels_status, events=None):
+def _write_dataset(tmp_path, labels_status, events=None, expected_detectors=None):
     run = {
         "run_id": "run-001",
-        "expected_detectors": [],
+        "expected_detectors": expected_detectors or [],
         "events": events or [],
         "metadata": {"labels_status": labels_status},
     }
@@ -84,3 +84,15 @@ def test_unknown_label_status_is_rejected(tmp_path):
 
     with pytest.raises(ValueError, match="Unsupported labels_status"):
         validate_dataset(_write_dataset(tmp_path, "pending"))
+
+def test_unlabelled_run_cannot_supply_expected_detector_labels(tmp_path):
+    import pytest
+
+    with pytest.raises(ValueError, match="must not provide expected_detectors"):
+        validate_dataset(
+            _write_dataset(
+                tmp_path,
+                "unlabelled",
+                expected_detectors=["action_loop"],
+            )
+        )
