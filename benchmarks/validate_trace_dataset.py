@@ -97,6 +97,10 @@ def validate_dataset(path: Path) -> dict:
                     )
 
                 expected = _detectors(list(run.get("expected_detectors", [])))
+                if labels_status == "unlabelled" and expected:
+                    raise ValueError(
+                        f"Unlabelled run {run_id!r} must not provide expected_detectors"
+                    )
                 if labels_status == "labelled":
                     labelled_runs += 1
                     for detector in DetectorType:
@@ -114,13 +118,14 @@ def validate_dataset(path: Path) -> dict:
                     unlabelled_runs += 1
 
                 latency = {}
-                for detector in sorted(expected, key=lambda item: item.value):
-                    if detector in first_detection_index:
-                        value = first_detection_index[detector] + 1
-                        latency[detector.value] = value
-                        latency_samples[detector.value].append(value)
-                    else:
-                        latency[detector.value] = None
+                if labels_status == "labelled":
+                    for detector in sorted(expected, key=lambda item: item.value):
+                        if detector in first_detection_index:
+                            value = first_detection_index[detector] + 1
+                            latency[detector.value] = value
+                            latency_samples[detector.value].append(value)
+                        else:
+                            latency[detector.value] = None
 
                 run_results.append({
                     "scenario": name,
