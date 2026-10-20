@@ -75,7 +75,7 @@ def test_labelled_false_positive_has_precision_and_fpr_but_no_recall(tmp_path):
     assert metric["tn"] == 0
     assert metric["precision"] == 0.0
     assert metric["recall"] is None
-    assert metric["f1"] is None
+    assert metric["f1"] == 0.0
     assert metric["false_positive_rate"] == 1.0
 
 
