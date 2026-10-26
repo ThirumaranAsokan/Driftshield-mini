@@ -36,7 +36,7 @@ pilot-data/
 
 ## 3. Convert and collect trajectories
 
-From the repository root, with the optional validation dependencies installed:
+From the repository root, with the optional validation dependencies installed. **Before using the validation harness on ATIF-converted data, ensure the unlabelled-run safeguards from PR #28 are present in your checkout. The current main branch must not be used to calculate metrics on unlabelled runs.**
 
 ```bash
 python -m pip install -e ".[external-validation]"
