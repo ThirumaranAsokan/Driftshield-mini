@@ -88,7 +88,10 @@ def convert_trajectory(payload: dict[str, Any], source_name: str = "") -> dict[s
                         "message": step.get("message", ""),
                         "reasoning": step.get("reasoning_content"),
                     },
-                    output_data={"model_name": step.get("model_name")},
+                    output_data={
+                        "text": step.get("message", ""),
+                        "model_name": step.get("model_name"),
+                    },
                 )
             )
 
@@ -151,7 +154,7 @@ def main() -> None:
 
     payload = json.loads(args.input.read_text(encoding="utf-8"))
     converted = convert_trajectory(payload, args.input.name)
-    args.output.write_text(json.dumps(converted, indent=2) + "\\n", encoding="utf-8")
+    args.output.write_text(json.dumps(converted, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {args.output}")
 
 
