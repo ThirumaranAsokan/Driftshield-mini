@@ -1,7 +1,8 @@
-"""Convert independently reviewed FinTrace records to DriftShield validation JSON.
+"""Convert reviewed FinTrace records to DriftShield validation JSON.
 
 Only records with a resolved positive/negative label for every detector are
 included. Blank or uncertain labels are excluded, never treated as negatives.
+This is a converter, not a calibration/holdout evaluation runner.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ def _label(value: Any) -> bool | None:
     raise ValueError(f"Unsupported review label: {value!r}")
 
 
-def _to_events(excerpt: Any) -> list[dict[str, Any]]:
+def _to_events(excerpt: Any, goal: str) -> list[dict[str, Any]]:
     if not isinstance(excerpt, list):
         raise TypeError("trajectory_excerpt must be a list")
     events = []
@@ -47,20 +48,22 @@ def _to_events(excerpt: Any) -> list[dict[str, Any]]:
         if kind == "function_call":
             action_type = "tool_call"
             action_name = str(item.get("tool_name") or "unknown_tool")
-            input_data = {"arguments": item.get("arguments", "")}
+            input_data = {"arguments": item.get("arguments", ""), "input": goal}
             output_data = {}
         elif kind == "function_call_output":
             action_type = "tool_result"
             action_name = str(item.get("tool_name") or "tool_result")
-            input_data = {}
+            input_data = {"input": goal}
             output_data = {"result": item.get("content", "")}
         elif role in {"assistant", "ai", "model"}:
             action_type = "llm_request"
             action_name = "assistant_output"
-            input_data = {}
+            # The calibrator reads input/query from trace input_data; keep the
+            # task goal there while preserving the assistant output separately.
+            input_data = {"input": goal}
             output_data = {"text": str(item.get("content", ""))}
         else:
-            # Preserve user/system messages as context, not detector outputs.
+            # User/system messages are context, not detector outputs.
             continue
         events.append({
             "action_type": action_type,
@@ -72,6 +75,7 @@ def _to_events(excerpt: Any) -> list[dict[str, Any]]:
             "metadata": {
                 "source_turn": item.get("turn", index),
                 "source_type": kind or role,
+                "goal_description": goal,
             },
         })
     return events
@@ -84,9 +88,9 @@ def convert_records(payload: dict[str, Any], split: str) -> dict[str, Any]:
     if not isinstance(rows, list) or not rows:
         raise ValueError("Review file must contain a non-empty 'runs' list")
 
-    scenarios = []
+    converted_runs: list[dict[str, Any]] = []
     excluded: list[dict[str, str]] = []
-    included = 0
+    seen_ids: set[str] = set()
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -95,6 +99,9 @@ def convert_records(payload: dict[str, Any], split: str) -> dict[str, Any]:
         review_id = str(row.get("review_id", "")).strip()
         if not review_id:
             raise ValueError("Every reviewed record must have a review_id")
+        if review_id in seen_ids:
+            raise ValueError(f"Duplicate review_id in split {split!r}: {review_id!r}")
+        seen_ids.add(review_id)
         labels = row.get("labels")
         if not isinstance(labels, dict):
             raise TypeError(f"Review {review_id} is missing labels")
@@ -102,43 +109,60 @@ def convert_records(payload: dict[str, Any], split: str) -> dict[str, Any]:
         normalized = {name: _label(labels.get(name)) for name in DETECTORS}
         unresolved = [name for name, value in normalized.items() if value is None]
         if unresolved:
-            excluded.append({"review_id": review_id, "reason": "unresolved labels: " + ", ".join(unresolved)})
+            excluded.append({
+                "review_id": review_id,
+                "reason": "unresolved labels: " + ", ".join(unresolved),
+            })
             continue
 
+        goal = str(row.get("task_goal", ""))
         expected = [name for name, value in normalized.items() if value is True]
-        events = _to_events(row.get("trajectory_excerpt", []))
-        scenarios.append({
-            "name": "fintrace-" + review_id,
-            "goal": str(row.get("task_goal", "")),
-            "calibration_runs": 0 if split == "holdout" else 1,
-            "loop_max_repeats": 4,
-            "runs": [{
-                "run_id": review_id,
-                "expected_detectors": expected,
-                "events": events,
-                "metadata": {
-                    "source": "YupengCao/FinTrace",
-                    "review_id": review_id,
-                    "split": split,
-                    "labels_status": "labelled",
-                    "reviewer_id": row.get("reviewer_id", ""),
-                    "review_confidence": row.get("review_confidence", ""),
-                },
-            }],
+        converted_runs.append({
+            "run_id": review_id,
+            "expected_detectors": expected,
+            "events": _to_events(row.get("trajectory_excerpt", []), goal),
+            "metadata": {
+                "source": "YupengCao/FinTrace",
+                "review_id": review_id,
+                "split": split,
+                "labels_status": "labelled",
+                "reviewer_id": row.get("reviewer_id", ""),
+                "review_confidence": row.get("review_confidence", ""),
+            },
         })
-        included += 1
 
-    if included == 0:
+    if not converted_runs:
         raise ValueError(f"No fully labelled records found for split {split!r}")
+
+    # A single monitor/scenario is required so runs share the same agent identity.
+    # For holdout-only files, the required count is deliberately unreachable:
+    # this converter cannot transfer/freeze a calibration baseline from another
+    # file, so it must not silently calibrate on holdout examples.
+    calibration_runs = (
+        len(converted_runs) if split == "calibration" else len(converted_runs) + 1
+    )
     return {
         "schema_version": 1,
         "source": "YupengCao/FinTrace",
         "split": split,
-        "label_provenance": "review labels supplied by input file; independence is not verified by this converter",
-        "included_runs": included,
+        "label_provenance": (
+            "review labels supplied by input file; independence is not verified by this converter"
+        ),
+        "evaluation_note": (
+            "Calibration and holdout are converted separately. This output does not transfer "
+            "a frozen calibration baseline to holdout; do not interpret holdout metrics as "
+            "baseline-calibrated evaluation until a paired evaluation runner is used."
+        ),
+        "included_runs": len(converted_runs),
         "excluded_unresolved_count": len(excluded),
         "excluded_unresolved": excluded,
-        "scenarios": scenarios,
+        "scenarios": [{
+            "name": "fintrace-review",
+            "goal": "",
+            "calibration_runs": calibration_runs,
+            "loop_max_repeats": 4,
+            "runs": converted_runs,
+        }],
     }
 
 
@@ -152,7 +176,9 @@ def main() -> None:
     payload = json.loads(args.review_file.read_text(encoding="utf-8"))
     converted = convert_records(payload, args.split)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(converted, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(converted, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(
         f"Converted {converted['included_runs']} labelled {args.split} runs; "
         f"excluded {converted['excluded_unresolved_count']} with unresolved labels."
