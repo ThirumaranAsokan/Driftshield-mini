@@ -22,17 +22,24 @@ def _record(review_id: str, labels: dict, split: str = "calibration") -> dict:
     }
 
 
-def test_converter_maps_resolved_labels_and_keeps_events_in_order():
-    payload = {"runs": [_record("abc123", {
-        "action_loop": "negative",
-        "goal_drift": "positive",
-        "resource_spike": False,
-    })]}
+def _resolved(action_loop="negative", goal_drift="negative", resource_spike="negative"):
+    return {
+        "action_loop": action_loop,
+        "goal_drift": goal_drift,
+        "resource_spike": resource_spike,
+    }
+
+
+def test_converter_maps_labels_events_and_run_specific_goal():
+    payload = {"runs": [_record("abc123", _resolved(goal_drift="positive"))]}
 
     result = convert_records(payload, "calibration")
-    run = result["scenarios"][0]["runs"][0]
+    scenario = result["scenarios"][0]
+    run = scenario["runs"][0]
 
     assert result["included_runs"] == 1
+    assert len(result["scenarios"]) == 1
+    assert scenario["name"] == "fintrace-review"
     assert run["run_id"] == "abc123"
     assert run["expected_detectors"] == ["goal_drift"]
     assert run["metadata"]["labels_status"] == "labelled"
@@ -40,46 +47,54 @@ def test_converter_maps_resolved_labels_and_keeps_events_in_order():
         "llm_request", "tool_call", "tool_result"
     ]
     assert run["events"][0]["output_data"]["text"] == "I will search the filing."
+    assert run["events"][0]["input_data"]["input"] == "Find the latest revenue."
+    assert run["events"][0]["metadata"]["goal_description"] == "Find the latest revenue."
     assert run["events"][1]["action_name"] == "search_reports"
+    assert scenario["calibration_runs"] == 1
 
 
 def test_uncertain_and_blank_labels_are_excluded_not_negative():
     payload = {"runs": [
-        _record("resolved", {"action_loop": "negative", "goal_drift": "negative", "resource_spike": "negative"}),
-        _record("uncertain", {"action_loop": "uncertain", "goal_drift": "negative", "resource_spike": ""}),
+        _record("resolved", _resolved()),
+        _record("uncertain", _resolved(action_loop="uncertain", resource_spike="")),
     ]}
 
     result = convert_records(payload, "calibration")
+    scenario = result["scenarios"][0]
 
     assert result["included_runs"] == 1
     assert result["excluded_unresolved_count"] == 1
     assert result["excluded_unresolved"][0]["review_id"] == "uncertain"
-    assert result["scenarios"][0]["runs"][0]["expected_detectors"] == []
+    assert scenario["runs"][0]["expected_detectors"] == []
 
 
 def test_converter_rejects_unsupported_labels_and_empty_split():
     with pytest.raises(ValueError, match="Unsupported review label"):
-        convert_records({"runs": [_record("bad", {
-            "action_loop": "maybe",
-            "goal_drift": "negative",
-            "resource_spike": "negative",
-        })]}, "calibration")
+        convert_records({"runs": [_record("bad", _resolved(action_loop="maybe"))]}, "calibration")
 
     with pytest.raises(ValueError, match="No fully labelled records"):
-        convert_records({"runs": [_record("blank", {
-            "action_loop": "",
-            "goal_drift": "uncertain",
-            "resource_spike": "negative",
-        })]}, "holdout")
+        convert_records({"runs": [_record("blank", _resolved(action_loop="", goal_drift="uncertain"))]}, "holdout")
 
 
-def test_converter_only_uses_requested_split():
+def test_converter_only_uses_requested_split_and_keeps_one_scenario():
     payload = {"runs": [
-        _record("cal", {"action_loop": False, "goal_drift": False, "resource_spike": False}, "calibration"),
-        _record("hold", {"action_loop": True, "goal_drift": False, "resource_spike": False}, "holdout"),
+        _record("cal", _resolved(), "calibration"),
+        _record("hold", _resolved(action_loop="positive"), "holdout"),
     ]}
 
     result = convert_records(payload, "holdout")
 
     assert result["included_runs"] == 1
+    assert len(result["scenarios"]) == 1
     assert result["scenarios"][0]["runs"][0]["run_id"] == "hold"
+    assert result["scenarios"][0]["calibration_runs"] == 2
+    assert "does not transfer a frozen calibration baseline" in result["evaluation_note"]
+
+
+def test_duplicate_review_ids_in_requested_split_are_rejected():
+    payload = {"runs": [
+        _record("duplicate", _resolved()),
+        _record("duplicate", _resolved()),
+    ]}
+    with pytest.raises(ValueError, match="Duplicate review_id"):
+        convert_records(payload, "calibration")
