@@ -16,7 +16,7 @@ def _payload():
                 "step_id": 3,
                 "timestamp": "2026-10-06T20:00:02Z",
                 "source": "agent",
-                "message": "I will search.",
+                "message": "I will search for the company's latest reported revenue.",
                 "model_name": "test/model",
                 "tool_calls": [
                     {"tool_call_id": "call-1", "function_name": "web_search", "arguments": {"search_query": "revenue"}}
@@ -42,6 +42,9 @@ def test_convert_finance_style_atif_preserves_tool_calls_and_real_metrics():
     assert llm_event["action_type"] == "llm_request"
     assert llm_event["token_count"] == 125
     assert llm_event["duration_ms"] == 1500.0
+    assert llm_event["output_data"]["text"] == (
+        "I will search for the company's latest reported revenue."
+    )
     assert tool_event["action_type"] == "tool_call"
     assert tool_event["action_name"] == "web_search"
     assert tool_event["output_data"]["result"] == "result"
