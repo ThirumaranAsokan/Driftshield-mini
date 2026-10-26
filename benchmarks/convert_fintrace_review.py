@@ -54,7 +54,7 @@ def _to_events(excerpt: Any) -> list[dict[str, Any]]:
             action_name = str(item.get("tool_name") or "tool_result")
             input_data = {}
             output_data = {"result": item.get("content", "")}
-        elif kind == "message" or role in {"assistant", "ai", "model"}:
+        elif role in {"assistant", "ai", "model"}:
             action_type = "llm_request"
             action_name = "assistant_output"
             input_data = {}
