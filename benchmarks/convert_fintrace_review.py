@@ -37,7 +37,7 @@ def _label(value: Any) -> bool | None:
 
 def _to_events(excerpt: Any) -> list[dict[str, Any]]:
     if not isinstance(excerpt, list):
-        raise ValueError("trajectory_excerpt must be a list")
+        raise TypeError("trajectory_excerpt must be a list")
     events = []
     for index, item in enumerate(excerpt):
         if not isinstance(item, dict):
@@ -97,7 +97,7 @@ def convert_records(payload: dict[str, Any], split: str) -> dict[str, Any]:
             raise ValueError("Every reviewed record must have a review_id")
         labels = row.get("labels")
         if not isinstance(labels, dict):
-            raise ValueError(f"Review {review_id} is missing labels")
+            raise TypeError(f"Review {review_id} is missing labels")
 
         normalized = {name: _label(labels.get(name)) for name in DETECTORS}
         unresolved = [name for name, value in normalized.items() if value is None]
@@ -134,7 +134,7 @@ def convert_records(payload: dict[str, Any], split: str) -> dict[str, Any]:
         "schema_version": 1,
         "source": "YupengCao/FinTrace",
         "split": split,
-        "independently_reviewed": True,
+        "label_provenance": "review labels supplied by input file; independence is not verified by this converter",
         "included_runs": included,
         "excluded_unresolved_count": len(excluded),
         "excluded_unresolved": excluded,
