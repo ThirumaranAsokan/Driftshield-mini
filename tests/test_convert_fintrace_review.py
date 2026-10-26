@@ -11,6 +11,7 @@ def _record(review_id: str, labels: dict, split: str = "calibration") -> dict:
         "split": split,
         "task_goal": "Find the latest revenue.",
         "trajectory_excerpt": [
+            {"turn": 1, "type": "message", "role": "user", "content": "Find revenue."},
             {"turn": 1, "type": "message", "role": "assistant", "content": "I will search the filing."},
             {"turn": 1, "type": "function_call", "tool_name": "search_reports", "arguments": "{\"query\":\"revenue\"}"},
             {"turn": 1, "type": "function_call_output", "tool_name": "search_reports", "content": "Found a filing."},
